@@ -34,7 +34,8 @@ wine_chroot/
 
 ### Para la implementación Python
 
-- **Python**: 3.10 o superior (usa solo biblioteca estándar)
+- **Python**: 3.10 o superior
+- **Dependencias Python**: `rich`, `rich-argparse` (se instalan automáticamente con uv)
 - **uv**: Gestor de paquetes Python ultrarrápido (opcional pero recomendado)
 
 ### Para la implementación Bash

@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Genera archivos .desktop para ejecutar aplicaciones Windows con Wine en entornos schroot de Debian"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+	"rich",
+	"rich-argparse",
+]
 license = { file = "LICENSE" }
 classifiers = [
 	"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -14,7 +17,7 @@ classifiers = [
 	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
 ]
-# El script solo usa la biblioteca estándar de Python (argparse, re, shutil, subprocess, pathlib)
+# Dependencias de Python gestionadas con uv.
 # Dependencias del sistema:
 #   Host: schroot, icoutils (wrestool, icotool)
 #   Chroot: wine

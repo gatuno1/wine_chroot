@@ -1,8 +1,7 @@
 # Python dependencies para make_wine_chroot_desktop.py
-#
-# Este script NO requiere dependencias de Python adicionales.
-# Solo usa la biblioteca estándar de Python (argparse, re, shutil, subprocess, pathlib).
-#
+rich
+rich-argparse
+
 # Dependencias del sistema requeridas:
 #
 # En el HOST (donde se ejecuta este script):

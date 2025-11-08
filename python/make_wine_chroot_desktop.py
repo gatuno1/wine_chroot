@@ -35,6 +35,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from rich.console import Console
+from rich_argparse import RichHelpFormatter
+
+
+console = Console()
+
 
 def linux_path_to_win(path: str) -> str:
     """
@@ -68,11 +74,11 @@ def extract_icon(exe_path: Path, icon_dir: Path, desktop_basename: str) -> Path 
             stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError as e:
-        print("[!] No se pudo extraer .ico con wrestool:", e)
+        console.print(f":warning: No se pudo extraer .ico con wrestool: {e}", style="yellow")
         return None
 
     if not tmp_ico.exists():
-        print("[!] wrestool no produjo el .ico")
+        console.print(":warning: wrestool no produjo el .ico", style="yellow")
         return None
 
     # 2. icotool a /tmp/icoextract_py
@@ -87,12 +93,12 @@ def extract_icon(exe_path: Path, icon_dir: Path, desktop_basename: str) -> Path 
             stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError as e:
-        print("[!] No se pudo convertir .ico a .png:", e)
+        console.print(f":warning: No se pudo convertir .ico a .png: {e}", style="yellow")
         return None
 
     pngs = sorted(tmp_png_dir.glob("*.png"))
     if not pngs:
-        print("[!] No se encontraron PNGs extraídos")
+        console.print(":warning: No se encontraron PNGs extraídos", style="yellow")
         return None
 
     # Elegimos el "más grande" por nombre (suele ser el último)
@@ -100,13 +106,40 @@ def extract_icon(exe_path: Path, icon_dir: Path, desktop_basename: str) -> Path 
     icon_dir.mkdir(parents=True, exist_ok=True)
     final_icon = icon_dir / f"{desktop_basename}.png"
     shutil.copy(chosen_png, final_icon)
-    print(f"[*] Ícono copiado a {final_icon}")
+    console.print(f":sparkles: Ícono copiado a {final_icon}", style="green")
     return final_icon
 
 
 def main() -> None:
+    """Genera un archivo .desktop para ejecutar aplicaciones Windows (.exe) con Wine dentro de un schroot.
+
+    Este script crea entradas de menú de escritorio que permiten lanzar ejecutables de Windows
+    en un entorno aislado de schroot con Wine. Opcionalmente puede extraer iconos del ejecutable
+    y configurar la entrada del menú con metadatos apropiados.
+
+        --exe (str): Ruta al archivo .exe vista desde el host dentro del árbol del schroot (requerido).
+        --name (str): Nombre que aparecerá en el menú de aplicaciones (requerido).
+        --desktop (str, opcional): Nombre del archivo .desktop. Si no se proporciona, se deriva del nombre.
+        --icon (flag, opcional): Si se activa, intenta extraer el icono del .exe usando wrestool+icotool.
+        --schroot (str, opcional): Nombre del schroot a usar. Por defecto es "debian-amd64".
+
+    Returns:
+        None
+    Raises:
+        SystemExit: If the specified .exe file does not exist at the provided path.
+
+        >>> python make_wine_chroot_desktop.py --exe /srv/debian-amd64/root/.wine/drive_c/Program\ Files/App/app.exe --name "My Application" --icon --schroot debian-amd64
+
+        - The .desktop file is created in ~/.local/share/applications/
+        - Extracted icons are saved in ~/.local/share/icons/
+        - May require sudoers configuration to run schroot without password
+        - The .exe path must be as seen from the host, not from inside the schroot
+        - After creation, you can find the application in your desktop environment's menu
+        - If password is requested on launch, add to sudoers: "USERNAME ALL=(ALL) NOPASSWD: /usr/bin/schroot"
+    """
     parser = argparse.ArgumentParser(
-        description="Genera un .desktop que ejecuta un .exe con wine dentro de un schroot."
+        description="Genera un .desktop que ejecuta un .exe con wine dentro de un schroot.",
+        formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
         "--exe",
@@ -136,9 +169,15 @@ def main() -> None:
 
     exe_path = Path(args.exe).expanduser()
     if not exe_path.exists():
-        print(f"[!] El .exe no existe en esa ruta: {exe_path}")
-        print("    Recuerda que debe ser la ruta vista desde el host, p.ej.")
-        print("    /srv/debian-amd64/root/.wine/drive_c/Program Files/...")
+        console.print(f":x: El .exe no existe en esa ruta: {exe_path}", style="bold red")
+        console.print(
+            "    Recuerda que debe ser la ruta vista desde el host, p.ej.",
+            style="bold red",
+        )
+        console.print(
+            "    /srv/debian-amd64/root/.wine/drive_c/Program Files/...",
+            style="bold red",
+        )
         raise SystemExit(1)
 
     app_name = args.name
@@ -180,7 +219,7 @@ def main() -> None:
         lines.append(f"Icon={icon_path}")
 
     desktop_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"[*] .desktop creado en: {desktop_file}")
+    console.print(f":memo: .desktop creado en: {desktop_file}", style="cyan")
 
     # intentar refrescar la base de datos de menús
     try:
@@ -194,10 +233,11 @@ def main() -> None:
         # no pasa nada si no está
         pass
 
-    print("\n✅ Listo.")
-    print(f"Busca “{app_name}” en el menú.")
-    print("Si pide password al lanzar, agrega en sudoers algo como:")
-    print("    TUUSUARIO ALL=(ALL) NOPASSWD: /usr/bin/schroot")
+    console.print()
+    console.print(":white_check_mark: Listo.", style="bold green")
+    console.print(f'Busca "{app_name}" en el menú.')
+    console.print("Si pide password al lanzar, agrega en sudoers algo como:")
+    console.print("    TUUSUARIO ALL=(ALL) NOPASSWD: /usr/bin/schroot")
 
 
 if __name__ == "__main__":
