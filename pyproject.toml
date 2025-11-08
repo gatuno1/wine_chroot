@@ -1,7 +1,7 @@
 [project]
 name = "wine-chroot"
 version = "0.1.0"
-description = "Genera archivos .desktop para ejecutar aplicaciones Windows con Wine en entornos schroot de Debian"
+description = "Generate .desktop launchers that run Windows apps with Wine inside Debian schroot environments"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,8 +17,8 @@ classifiers = [
 	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
 ]
-# Dependencias de Python gestionadas con uv.
-# Dependencias del sistema:
+# Python dependencies are managed with uv.
+# System dependencies:
 #   Host: schroot, icoutils (wrestool, icotool)
 #   Chroot: wine
 

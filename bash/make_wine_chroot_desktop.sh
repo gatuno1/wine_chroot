@@ -4,33 +4,32 @@
 #
 # make_wine_chroot_desktop.sh
 #
-# Genera un .desktop que ejecuta un .exe de Windows usando Wine dentro de un schroot.
-# El script se ejecuta en el host y crea accesos directos que lanzan aplicaciones
-# dentro del entorno chroot donde Wine está instalado.
+# Generate a .desktop launcher that runs a Windows .exe with Wine inside a schroot.
+# The script runs on the host and creates shortcuts that launch applications
+# inside the chroot environment where Wine is installed.
 #
-# Casos de uso:
-# - Ejecutar aplicaciones Windows x86/amd64 en hosts ARM64 usando un chroot Debian amd64
-# - Aislar aplicaciones Wine en entornos chroot separados
+# Use cases:
+# - Run Windows x86/amd64 applications on ARM64 hosts using a Debian amd64 schroot
+# - Isolate Wine applications in dedicated chroot environments
 #
-# Uso:
+# Usage:
 #   ./make_wine_chroot_desktop.sh --exe "/srv/debian-amd64/root/.wine/drive_c/Program Files/WlkataStudio/WlkataStudio.exe" \
 #       --name "Wlkata Studio (Wine chroot)" --icon
 #
-# Opciones:
-#   --exe RUTA        -> Ruta al .exe vista desde el host dentro del árbol del schroot (requerido)
-#   --name NOMBRE     -> Nombre que aparecerá en el menú (requerido)
-#   --desktop ARCHIVO -> Nombre del archivo .desktop (por defecto derivado del nombre)
-#   --icon            -> Intentar extraer el icono del .exe usando wrestool+icotool
-#   --schroot NOMBRE  -> Nombre del schroot a usar (default: debian-amd64)
+# Options:
+#   --exe PATH        -> Path to the .exe as seen from the host inside the schroot tree (required)
+#   --name NAME       -> Name that will appear in the desktop menu (required)
+#   --desktop FILE    -> Name of the .desktop file (defaults to a derived slug)
+#   --icon            -> Attempt to extract the .exe icon using wrestool + icotool
+#   --schroot NAME    -> Name of the schroot to use (default: debian-amd64)
 #
-# Requisitos:
+# Requirements:
 # - Host: schroot, icoutils (wrestool, icotool)
-# - Chroot: Wine instalado y configurado
+# - Chroot: Wine installed and configured
 #
-# Este programa es software libre: puedes redistribuirlo y/o modificarlo
-# según los términos de la GNU General Public License publicada por la Free
-# Software Foundation, ya sea la versión 3 de la licencia o (a tu elección)
-# cualquier versión posterior.
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 set -e
 set -u
@@ -42,20 +41,20 @@ DESKTOP_NAME=""
 DO_ICON=false
 
 show_help() {
-    cat << EOF
-Uso: $(basename "$0") --exe EXE --name NAME [--desktop DESKTOP] [--icon] [--schroot SCHROOT]
+        cat << EOF
+Usage: $(basename "$0") --exe EXE --name NAME [--desktop DESKTOP] [--icon] [--schroot SCHROOT]
 
-Genera un .desktop que ejecuta un .exe con wine dentro de un schroot.
+Generate a .desktop launcher that runs an .exe with Wine inside a schroot.
 
-Argumentos requeridos:
-  --exe EXE          Ruta al .exe vista desde el host dentro del árbol del schroot
-  --name NAME        Nombre que aparecerá en el menú
+Required arguments:
+    --exe EXE          Path to the .exe as seen from the host inside the schroot tree
+    --name NAME        Name that will appear in the desktop menu
 
-Argumentos opcionales:
-  --desktop DESKTOP  Nombre del archivo .desktop (por defecto derivado del nombre)
-  --icon             Intentar extraer el icono del .exe usando wrestool+icotool
-  --schroot SCHROOT  Nombre del schroot a usar (default: debian-amd64)
-  -h, --help         Mostrar esta ayuda
+Optional arguments:
+    --desktop DESKTOP  Name of the .desktop file (defaults to a derived slug)
+    --icon             Attempt to extract the .exe icon using wrestool + icotool
+    --schroot SCHROOT  Name of the schroot to use (default: debian-amd64)
+    -h, --help         Show this help message
 
 EOF
 }
@@ -87,38 +86,38 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
-            echo "Error: Opción desconocida: $1"
-            echo "Usa --help para ver las opciones disponibles."
+            echo "Error: Unknown option: $1"
+            echo "Use --help to list the available options."
             exit 1
             ;;
     esac
 done
 
 if [[ -z "$EXE_PATH" ]]; then
-    echo "Error: Falta el argumento requerido --exe"
-    echo "Uso: $(basename "$0") --exe EXE --name NAME"
-    echo "Usa --help para más información."
+    echo "Error: Missing required argument --exe"
+    echo "Usage: $(basename "$0") --exe EXE --name NAME"
+    echo "Use --help for more information."
     exit 1
 fi
 
 if [[ -z "$APP_NAME" ]]; then
-    echo "Error: Falta el argumento requerido --name"
-    echo "Uso: $(basename "$0") --exe EXE --name NAME"
-    echo "Usa --help para más información."
+    echo "Error: Missing required argument --name"
+    echo "Usage: $(basename "$0") --exe EXE --name NAME"
+    echo "Use --help for more information."
     exit 1
 fi
 
-# Verificar que el archivo .exe existe
+# Ensure the .exe file exists
 if [[ ! -f "$EXE_PATH" ]]; then
-    echo "[!] El .exe no existe en esa ruta: $EXE_PATH"
-    echo "    Recuerda que debe ser la ruta vista desde el host, p.ej."
+    echo "[!] The .exe does not exist at this path: $EXE_PATH"
+    echo "    Remember that it must be the path as seen from the host, e.g."
     echo "    /srv/debian-amd64/root/.wine/drive_c/Program Files/..."
     exit 1
 fi
 
-# Nombre del archivo .desktop
+# Determine the .desktop filename
 if [[ -z "$DESKTOP_NAME" ]]; then
-    # Convertir nombre a formato válido (similar a Python: re.sub(r"[^a-z0-9]+", "-", ...))
+    # Convert the name into a safe filename (similar to Python: re.sub(r"[^a-z0-9]+", "-", ...))
     DESKTOP_NAME="$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]\+/-/g' | sed 's/^-//;s/-$//')".desktop
 fi
 
@@ -126,25 +125,25 @@ DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons"
 mkdir -p "$DESKTOP_DIR" "$ICON_DIR"
 
-# Convertir la ruta Linux del exe a ruta Windows (C:\...)
-# Si la ruta contiene 'drive_c/', la convertimos a C:\... con backslashes.
-# Si ya está en formato C:\..., la devolvemos igual.
+# Convert the Linux path of the exe to a Windows path (C:\...)
+# If the path contains 'drive_c/', convert it to C:\... with backslashes.
+# If it is already in C:\... format, leave it untouched.
 WIN_EXE_PATH=""
 if [[ "$EXE_PATH" =~ ^[A-Za-z]:\\ ]]; then
-    # Ya está en formato Windows
+    # Already in Windows format
     WIN_EXE_PATH="$EXE_PATH"
 elif [[ "$EXE_PATH" == *"drive_c/"* ]]; then
-    # Extraer la parte después de drive_c/
+    # Extract the portion after drive_c/
     AFTER_DRIVE=$(echo "$EXE_PATH" | sed 's#.*drive_c/##')
-    # Cambiar / por \
+    # Replace / with \
     AFTER_DRIVE_WIN=$(echo "$AFTER_DRIVE" | sed 's#/#\\#g')
     WIN_EXE_PATH="C:\\$AFTER_DRIVE_WIN"
 else
-    # Último recurso: devolver tal cual (wine soporta rutas unix)
+    # Fallback: return the original path (Wine handles Unix paths)
     WIN_EXE_PATH="$EXE_PATH"
 fi
 
-# Icono opcional
+# Optional icon extraction
 ICON_PATH=""
 if $DO_ICON; then
     DESKTOP_BASENAME="$(basename "$DESKTOP_NAME" .desktop)"
@@ -152,44 +151,44 @@ if $DO_ICON; then
     TMP_ICO="/tmp/${DESKTOP_BASENAME}.ico"
     TMP_PNG_DIR="/tmp/icoextract_bash"
     
-    echo "[*] Extrayendo ícono desde $EXE_PATH ..."
+    echo "[*] Extracting icon from $EXE_PATH ..."
     
-    # 1. wrestool - extraer el .ico del .exe
+    # Step 1: wrestool - extract the .ico from the .exe
     if sudo wrestool -x -t14 "$EXE_PATH" -o "$TMP_ICO" 2>/dev/null; then
         if [[ -f "$TMP_ICO" ]]; then
-            # 2. icotool - convertir .ico a .png
+            # Step 2: icotool - convert .ico to .png
             mkdir -p "$TMP_PNG_DIR"
             if icotool -x "$TMP_ICO" -o "$TMP_PNG_DIR" 2>/dev/null; then
-                # Elegir el PNG más grande (el último en orden alfabético suele ser el más grande)
+                # Choose the largest PNG (often the last one in alphabetical order)
                 CHOSEN_PNG=$(ls -1 "$TMP_PNG_DIR"/*.png 2>/dev/null | sort | tail -n 1 || true)
                 if [[ -n "$CHOSEN_PNG" ]]; then
                     cp "$CHOSEN_PNG" "$ICON_PATH"
-                    echo "[*] Ícono copiado a $ICON_PATH"
+                    echo "[*] Icon copied to $ICON_PATH"
                 else
-                    echo "[!] No se encontraron PNGs extraídos"
+                    echo "[!] No extracted PNGs were found"
                     ICON_PATH=""
                 fi
             else
-                echo "[!] No se pudo convertir .ico a .png"
+                echo "[!] Failed to convert .ico to .png"
                 ICON_PATH=""
             fi
         else
-            echo "[!] wrestool no produjo el .ico"
+            echo "[!] wrestool did not produce an .ico"
             ICON_PATH=""
         fi
     else
-        echo "[!] No se pudo extraer .ico con wrestool"
+        echo "[!] Failed to extract .ico with wrestool"
         ICON_PATH=""
     fi
 fi
 
 DESKTOP_FILE="$DESKTOP_DIR/$DESKTOP_NAME"
 
-# Contenido del .desktop
+# .desktop contents
 {
     echo "[Desktop Entry]"
     echo "Name=$APP_NAME"
-    echo "Comment=Ejecutar $APP_NAME dentro del schroot $SCHROOT_NAME"
+    echo "Comment=Run $APP_NAME inside the $SCHROOT_NAME schroot"
     echo "Exec=sudo schroot -c $SCHROOT_NAME -- wine \"$WIN_EXE_PATH\""
     echo "Type=Application"
     echo "Categories=Wine;WindowsApps;"
@@ -201,21 +200,21 @@ DESKTOP_FILE="$DESKTOP_DIR/$DESKTOP_NAME"
     fi
 } > "$DESKTOP_FILE"
 
-echo "[*] .desktop creado en: $DESKTOP_FILE"
+echo "[*] .desktop created at: $DESKTOP_FILE"
 
-# Intentar refrescar la base de datos de menús
+# Attempt to refresh the desktop database
 update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 
 echo ""
-echo "✅ Listo."
-echo "Busca "$APP_NAME" en el menú."
-echo "Si pide password al lanzar, agrega en sudoers algo como:"
-echo "    TUUSUARIO ALL=(ALL) NOPASSWD: /usr/bin/schroot"
+echo "[OK] Done."
+echo "Look for '$APP_NAME' in your desktop menu."
+echo "If sudo prompts for a password, add a sudoers entry such as:"
+echo "    YOURUSER ALL=(ALL) NOPASSWD: /usr/bin/schroot"
 
-echo "[*] Acceso creado en: $DESKTOP_FILE"
-echo "[*] Recargando base de datos de escritorio..."
+echo "[*] Access created at: $DESKTOP_FILE"
+echo "[*] Refreshing desktop database..."
 update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 
-echo "Listo. Deberías ver “$APP_NAME” en el menú (categoría Wine)."
-echo "Si te pide contraseña al lanzar, agrega en sudoers:"
-echo "    TUUSUARIO ALL=(ALL) NOPASSWD: /usr/bin/schroot"
+echo "Done. You should see '$APP_NAME' in the menu (Wine category)."
+echo "If it prompts for a password when launching, add to sudoers:"
+echo "    YOURUSER ALL=(ALL) NOPASSWD: /usr/bin/schroot"

@@ -1,20 +1,20 @@
-# Python dependencies para make_wine_chroot_desktop.py
+# Python dependencies for make_wine_chroot_desktop.py
 rich
 rich-argparse
 
-# Dependencias del sistema requeridas:
+# Required system dependencies:
 #
-# En el HOST (donde se ejecuta este script):
-# - schroot       (gestionar entornos chroot)
-# - icoutils      (wrestool, icotool para extraer iconos)
+# On the HOST (where this script runs):
+# - schroot       (manage chroot environments)
+# - icoutils      (wrestool, icotool for icon extraction)
 #
-# Dentro del CHROOT (donde se ejecuta Wine):
-# - wine          (ejecutar aplicaciones Windows)
+# Inside the CHROOT (where Wine runs):
+# - wine          (run Windows applications)
 #
-# Para instalar en el host:
+# To install on the host:
 # sudo apt install schroot icoutils
 #
-# Para instalar en el chroot:
+# To install inside the chroot:
 # sudo schroot -c debian-amd64
 # apt install wine
 # exit

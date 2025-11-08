@@ -1,298 +1,298 @@
 # Wine Chroot Project
 
-Proyecto con dos implementaciones: Python 3.10+ y Bash, diseñado para ejecutarse en Debian Linux.
+This project ships two implementations, Python 3.10+ and Bash, designed to run on Debian Linux hosts.
 
-## Estructura del Proyecto
+## Project Structure
 
 ```asciiart
 wine_chroot/
-├── python/                            # Implementación en Python
-│   ├── make_wine_chroot_desktop.py    # Script principal de Python
-│   └── requirements.txt               # Dependencias de Python (legacy)
-├── bash/                              # Implementación en Bash
-│   └── make_wine_chroot_desktop.sh    # Script principal de Bash
+├── python/                            # Python implementation
+│   ├── make_wine_chroot_desktop.py    # Primary Python script
+│   └── requirements.txt               # Python dependencies (legacy helpers)
+├── bash/                              # Bash implementation
+│   └── make_wine_chroot_desktop.sh    # Primary Bash script
 ├── .github/
 │   └── copilot-instructions.md
-├── pyproject.toml                     # Configuración del proyecto Python (uv)
+├── pyproject.toml                     # Python project configuration (uv)
 ├── .gitignore
 └── README.md
 ```
 
-## Requisitos del Sistema
+## System Requirements
 
-### En el Host (donde se ejecutan estos scripts)
+### Host (where these scripts run)
 
-- **Sistema Operativo**: Debian Linux (o distribuciones basadas en Debian como Ubuntu)
-- **Permisos**: Usuario con capacidad de ejecutar scripts y sudo
-- **Schroot**: Para gestionar y acceder al entorno chroot
-- **icoutils**: Herramientas para extraer iconos del .exe (wrestool, icotool)
+- **Operating System**: Debian Linux (or Debian-based distributions such as Ubuntu)
+- **Privileges**: User able to run scripts with sudo
+- **schroot**: Manage and access the chroot environment
+- **icoutils**: Tools to extract icons from .exe files (wrestool, icotool)
 
-### Dentro del Chroot (debian-amd64)
+### Inside the chroot (debian-amd64)
 
-- **Wine**: Instalado dentro del schroot para ejecutar aplicaciones Windows
-- El schroot debe estar configurado y listo para usar (se asume ya creado)
+- **Wine**: Installed inside the schroot to run Windows applications
+- The schroot must already exist and be configured
 
-### Para la implementación Python
+### Python Implementation Requirements
 
-- **Python**: 3.10 o superior
-- **Dependencias Python**: `rich`, `rich-argparse` (se instalan automáticamente con uv)
-- **uv**: Gestor de paquetes Python ultrarrápido (opcional pero recomendado)
+- **Python**: 3.10 or newer
+- **Python dependencies**: `rich`, `rich-argparse` (installed automatically via uv)
+- **uv**: Ultra-fast Python package manager (optional but recommended)
 
-### Para la implementación Bash
+### Bash Implementation Requirements
 
-- **Bash**: 4.0 o superior (normalmente preinstalado en Debian)
+- **Bash**: 4.0 or newer (usually installed by default on Debian)
 
-## Instalación en Debian
+## Installation on Debian
 
-### 1. Instalar uv
+### 1. Install uv
 
 ```bash
-# Instalar uv (recomendado)
+# Recommended installation
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# O usando pip
+# Alternative via pip
 pip install uv
 ```
 
-### 2. Verificar versiones instaladas
+### 2. Verify installed versions
 
 ```bash
-# Verificar uv
+# Check uv
 uv --version
 
-# Verificar Python
+# Check Python
 python3 --version
 
-# Verificar Bash
+# Check Bash
 bash --version
 ```
 
-### 3. Instalar dependencias del sistema en el HOST
+### 3. Install host-side system dependencies
 
 ```bash
-# Actualizar lista de paquetes
+# Refresh package list
 sudo apt update
 
-# Instalar Python 3.10+ si no está disponible
+# Install Python 3.10+ if missing
 sudo apt install python3
 
-# Instalar herramientas necesarias en el host
+# Install required host tools
 sudo apt install schroot icoutils
 
-# Verificar instalación
+# Validate installation
 schroot --version
 wrestool --version
 icotool --version
 ```
 
-### 4. Configurar Wine en el CHROOT
+### 4. Set up Wine inside the chroot
 
-Wine debe estar instalado **dentro del schroot**, no en el host:
+Wine must be installed **inside the schroot**, not on the host:
 
 ```bash
-# Entrar al chroot
+# Enter the chroot
 sudo schroot -c debian-amd64
 
-# Dentro del chroot, instalar wine
+# Inside the chroot, install wine
 apt update
 apt install wine
 
-# Verificar instalación
+# Verify installation
 wine --version
 
-# Salir del chroot
+# Leave the chroot
 exit
 ```
 
-**Nota:** Este README asume que ya tienes el schroot debian-amd64 creado y configurado. La creación del schroot se documentará en el futuro.
+**Note:** This README assumes an existing debian-amd64 schroot. Instructions for creating the schroot will be documented separately.
 
-## Uso
+## Usage
 
-### Implementación Python
+### Python Implementation Usage
 
-El script genera archivos `.desktop` para lanzar aplicaciones Windows a través de Wine en un entorno schroot.
+The Python script generates `.desktop` launchers that run Windows applications through Wine inside a schroot.
 
-#### Sintaxis básica
+#### Basic Usage (Python)
 
 ```bash
 uv run python/make_wine_chroot_desktop.py \
     --exe "/srv/debian-amd64/root/.wine/drive_c/Program Files/App/app.exe" \
-    --name "Nombre de la Aplicación"
+    --name "Application Name"
 ```
 
-#### Opciones adicionales
+#### Selected Options (Python)
 
 ```bash
-# Con extracción de icono
+# Extract icon assets
 uv run python/make_wine_chroot_desktop.py \
-    --exe "/ruta/al/programa.exe" \
-    --name "Mi Aplicación" \
+    --exe "/path/to/program.exe" \
+    --name "My Application" \
     --icon
 
-# Con schroot personalizado
+# Target a custom schroot
 uv run python/make_wine_chroot_desktop.py \
-    --exe "/ruta/al/programa.exe" \
-    --name "Mi Aplicación" \
-    --schroot "mi-chroot"
+    --exe "/path/to/program.exe" \
+    --name "My Application" \
+    --schroot "my-chroot"
 
-# Ver todas las opciones
+# Show CLI help
 uv run python/make_wine_chroot_desktop.py --help
 ```
 
-### Métodos de ejecución
+### Execution methods
 
-#### Opción 1: Usando uv (Recomendado)
+#### Option 1: Run with uv (recommended)
 
 ```bash
-# Ejecutar directamente con uv
-uv run python/make_wine_chroot_desktop.py --exe <ruta> --name <nombre>
+# Execute directly via uv
+uv run python/make_wine_chroot_desktop.py --exe <path> --name <name>
 
-# O si instalaste el proyecto
-uv run wine-chroot --exe <ruta> --name <nombre>
+# Or, after installing the project entry point
+uv run wine-chroot --exe <path> --name <name>
 ```
 
-#### Opción 2: Con entorno virtual de uv
+#### Option 2: uv-managed virtual environment
 
 ```bash
-# Crear entorno virtual con uv
+# Create a virtual environment with uv
 uv venv
 
-# Activar entorno virtual
+# Activate the environment
 source .venv/bin/activate
 
-# Instalar el proyecto y dependencias
+# Install the project and dependencies
 uv pip install -e .
 
-# Ejecutar el script
+# Run the script
 python python/make_wine_chroot_desktop.py
 
-# Desactivar entorno virtual cuando termines
+# Deactivate when finished
 deactivate
 ```
 
-#### Opción 3: Ejecución directa (sin uv)
+#### Option 3: Direct execution (without uv)
 
 ```bash
-# Navegar al directorio python
+# Navigate to the python directory
 cd python
 
-# Ejecutar el script
+# Run the script
 python3 make_wine_chroot_desktop.py
 ```
 
-### Implementación Bash
+### Bash Implementation Usage
 
-El script Bash proporciona la misma funcionalidad que la versión Python.
+The Bash script mirrors the functionality of the Python version.
 
-#### Uso básico
+#### Basic Usage (Bash)
 
 ```bash
 ./bash/make_wine_chroot_desktop.sh \
     --exe "/srv/debian-amd64/root/.wine/drive_c/Program Files/App/app.exe" \
-    --name "Nombre de la Aplicación"
+    --name "Application Name"
 ```
 
-#### Opciones del script Bash
+#### Selected Options (Bash)
 
 ```bash
-# Con extracción de icono
+# Extract icon assets
 ./bash/make_wine_chroot_desktop.sh \
-    --exe "/ruta/al/programa.exe" \
-    --name "Mi Aplicación" \
+    --exe "/path/to/program.exe" \
+    --name "My Application" \
     --icon
 
-# Con schroot personalizado
+# Target a custom schroot
 ./bash/make_wine_chroot_desktop.sh \
-    --exe "/ruta/al/programa.exe" \
-    --name "Mi Aplicación" \
-    --schroot "mi-chroot"
+    --exe "/path/to/program.exe" \
+    --name "My Application" \
+    --schroot "my-chroot"
 
-# Ver todas las opciones
+# Show CLI help
 ./bash/make_wine_chroot_desktop.sh --help
 ```
 
-**Nota:** Asegúrate de que el script tenga permisos de ejecución:
+**Note:** Ensure the script is executable:
 
 ```bash
 chmod +x bash/make_wine_chroot_desktop.sh
 ```
 
-## Solución de Problemas
+## Troubleshooting
 
 ### uv: "command not found"
 
 ```bash
-# Instalar uv
+# Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Reiniciar terminal o recargar shell
-source ~/.zshrc  # o ~/.bashrc
+# Restart the terminal or reload the shell
+source ~/.zshrc  # or ~/.bashrc
 ```
 
 ### Python: "command not found"
 
 ```bash
-# Instalar Python 3
+# Install Python 3
 sudo apt install python3
 ```
 
 ### Bash: "Permission denied"
 
 ```bash
-# Dar permisos de ejecución
+# Grant execute permissions
 chmod +x bash/make_wine_chroot_desktop.sh
 ```
 
-### Python: Versión incorrecta
+### Python: incorrect version
 
 ```bash
-# Verificar versión instalada
+# Check the installed version
 python3 --version
 
-# uv puede usar diferentes versiones de Python
+# uv can manage alternative Python versions
 uv python install 3.11
 uv python pin 3.11
 ```
 
-### Herramientas faltantes en el HOST
+### Missing host tools
 
 ```bash
-# Si wrestool o icotool no están disponibles
+# If wrestool or icotool are unavailable
 sudo apt install icoutils
 
-# Si schroot no está disponible
+# If schroot is unavailable
 sudo apt install schroot
 ```
 
-### Wine no funciona dentro del chroot
+### Wine fails inside the chroot
 
 ```bash
-# Entrar al chroot
+# Enter the chroot
 sudo schroot -c debian-amd64
 
-# Verificar si wine está instalado
+# Check whether wine is installed
 which wine
 
-# Si no está, instalarlo
+# If missing, install it
 apt update
 apt install wine
 
-# Probar wine
+# Test wine
 wine --version
 
-# Salir del chroot
+# Exit the chroot
 exit
 ```
 
-## Licencia
+## License
 
-Este proyecto se distribuye bajo los términos de la **GNU General Public License**
-versión 3 (o, a tu elección, cualquier versión posterior). Consulta el archivo
-`LICENSE` para obtener el texto completo de la licencia.
+This project is distributed under the terms of the **GNU General Public License**
+version 3 (or, at your option, any later version). See the `LICENSE` file for the
+full license text.
 
-Al contribuir con este repositorio aceptas que tus aportaciones se publicarán
-bajo la misma licencia GPL-3.0-or-later.
+By contributing to this repository you agree that your contributions will be
+published under the GPL-3.0-or-later license.
 
-## Contribuciones
+## Contributing
 
-Las contribuciones son bienvenidas. Por favor, asegúrate de que tu código funcione correctamente en Debian Linux antes de enviar cambios.
+Contributions are welcome. Please make sure your changes work correctly on Debian Linux before opening a pull request.

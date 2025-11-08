@@ -1,80 +1,80 @@
 # Wine Chroot Project - Copilot Instructions
 
-## Resumen del Proyecto
+## Project Summary
 
-Proyecto con dos implementaciones: Python 3.10+ y Bash, diseñado para ejecutarse en Debian Linux.
-Genera archivos .desktop para ejecutar aplicaciones Windows con Wine en entornos schroot.
-Utiliza **uv** como gestor de paquetes y entornos Python.
-Licencia: GNU GPL v3 o posterior.
+The project ships Python 3.10+ and Bash implementations designed for Debian Linux hosts.
+It generates .desktop files to launch Windows applications with Wine inside schroot environments.
+The toolchain relies on **uv** for Python environments and packaging.
+License: GNU GPL v3 or later.
 
-**Arquitectura:**
-- Scripts se ejecutan en el **HOST** (Debian ARM64 u otra arquitectura)
-- Wine se ejecuta **DENTRO del CHROOT** (Debian amd64)
-- Permite ejecutar aplicaciones Windows x86/amd64 en hosts con otras arquitecturas
+**Architecture:**
+- Scripts run on the **HOST** (Debian ARM64 or other architectures)
+- Wine runs **INSIDE THE CHROOT** (Debian amd64)
+- Enables Windows x86/amd64 applications on hosts with different CPU architectures
 
-## Dependencias
+## Dependencies
 
 ### Python
-- **Versión mínima**: Python 3.10+
-- **Dependencias Python**: Ninguna (solo biblioteca estándar)
-- **Módulos usados**: argparse, re, shutil, subprocess, pathlib
+- **Minimum version**: Python 3.10+
+- **Python dependencies**: rich, rich-argparse
+- **Standard library modules**: argparse, re, shutil, subprocess, pathlib
 
-### Sistema - En el HOST
-- schroot (gestionar entornos chroot)
-- icoutils (wrestool, icotool para extraer iconos)
+### System - Host side
+- schroot (manage chroot environments)
+- icoutils (wrestool, icotool for icon extraction)
 
-### Sistema - Dentro del CHROOT
-- wine (ejecutar aplicaciones Windows)
-- El chroot debe estar configurado y listo para usar
+### System - Inside the chroot
+- wine (run Windows applications)
+- The chroot must be provisioned and ready to use
 
-## Estructura del Proyecto
+## Project Layout
 
-- `python/` - Implementación en Python 3.10+
-  - `make_wine_chroot_desktop.py` - Script principal
-- `bash/` - Implementación en Bash
-  - `make_wine_chroot_desktop.sh` - Script principal
-- `pyproject.toml` - Configuración del proyecto Python (uv)
-- `README.md` - Documentación completa
+- `python/` - Python 3.10+ implementation
+  - `make_wine_chroot_desktop.py` - Main Python script
+- `bash/` - Bash implementation
+  - `make_wine_chroot_desktop.sh` - Main Bash script
+- `pyproject.toml` - Python project configuration (uv)
+- `README.md` - Project documentation
 
-## Tecnologías Utilizadas
+## Tooling
 
 - Python 3.10+
 - Bash 4.0+
-- uv (gestor de paquetes Python)
+- uv (Python package manager)
 - Debian Linux
 
-## Comandos Principales
+## Core Commands
 
-### Python con uv
+### Python via uv
 
 ```bash
-# Ejecutar script Python
+# Run the Python script
 uv run python/make_wine_chroot_desktop.py
 
-# Agregar dependencias
-uv add <paquete>
+# Add dependencies
+uv add <package>
 
-# Crear entorno virtual
+# Create a virtual environment
 uv venv
 
-# Instalar proyecto
+# Install the project
 uv pip install -e .
 ```
 
 ### Bash
 
 ```bash
-# Ejecutar script Bash
+# Execute the Bash script
 ./bash/make_wine_chroot_desktop.sh
 
-# Dar permisos de ejecución
+# Grant execution permissions
 chmod +x bash/make_wine_chroot_desktop.sh
 ```
 
-## Mejores Prácticas
+## Best Practices
 
-- Usar uv para todas las operaciones con Python
-- Mantener compatibilidad con Python 3.10+
-- Scripts Bash con `set -e` y `set -u`
-- Documentar en español
-- Probar en Debian Linux
+- Prefer uv for Python-related operations
+- Maintain compatibility with Python 3.10+
+- Bash scripts should use `set -e` and `set -u`
+- Document user-facing changes in English
+- Test on Debian Linux
