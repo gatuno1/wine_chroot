@@ -16,12 +16,15 @@
 #   ./make_wine_chroot_desktop.sh --exe "/srv/debian-amd64/root/.wine/drive_c/Program Files/WlkataStudio/WlkataStudio.exe" \
 #       --name "Wlkata Studio (Wine chroot)" --icon
 #
+#   # Or using short options:
+#   ./make_wine_chroot_desktop.sh -e "/path/to/app.exe" -n "App Name" -i -s debian-amd64
+#
 # Options:
-#   --exe PATH        -> Path to the .exe as seen from the host inside the schroot tree (required)
-#   --name NAME       -> Name that will appear in the desktop menu (required)
-#   --desktop FILE    -> Name of the .desktop file (defaults to a derived slug)
-#   --icon            -> Attempt to extract the .exe icon using wrestool + icotool
-#   --schroot NAME    -> Name of the schroot to use (default: debian-amd64)
+#   -e, --exe PATH        -> Path to the .exe as seen from the host inside the schroot tree (required)
+#   -n, --name NAME       -> Name that will appear in the desktop menu (required)
+#   -d, --desktop FILE    -> Name of the .desktop file (defaults to a derived slug)
+#   -i, --icon            -> Attempt to extract the .exe icon using wrestool + icotool
+#   -s, --schroot NAME    -> Name of the schroot to use (default: debian-amd64)
 #
 # Requirements:
 # - Host: schroot, icoutils (wrestool, icotool)
@@ -41,20 +44,21 @@ DESKTOP_NAME=""
 DO_ICON=false
 
 show_help() {
-        cat << EOF
-Usage: $(basename "$0") --exe EXE --name NAME [--desktop DESKTOP] [--icon] [--schroot SCHROOT]
+    cat << EOF
+Usage: $(basename "$0") -e EXE -n NAME [-d DESKTOP] [-i] [-s SCHROOT]
+       $(basename "$0") --exe EXE --name NAME [--desktop DESKTOP] [--icon] [--schroot SCHROOT]
 
 Generate a .desktop launcher that runs an .exe with Wine inside a schroot.
 
 Required arguments:
-    --exe EXE          Path to the .exe as seen from the host inside the schroot tree
-    --name NAME        Name that will appear in the desktop menu
+  -e, --exe EXE          Path to the .exe as seen from the host inside the schroot tree
+  -n, --name NAME        Name that will appear in the desktop menu
 
 Optional arguments:
-    --desktop DESKTOP  Name of the .desktop file (defaults to a derived slug)
-    --icon             Attempt to extract the .exe icon using wrestool + icotool
-    --schroot SCHROOT  Name of the schroot to use (default: debian-amd64)
-    -h, --help         Show this help message
+  -d, --desktop DESKTOP  Name of the .desktop file (defaults to a derived slug)
+  -i, --icon             Attempt to extract the .exe icon using wrestool + icotool
+  -s, --schroot SCHROOT  Name of the schroot to use (default: debian-amd64)
+  -h, --help             Show this help message
 
 EOF
 }
@@ -65,23 +69,23 @@ while [[ $# -gt 0 ]]; do
             show_help
             exit 0
             ;;
-        --exe)
+        -e|--exe)
             EXE_PATH="$2"
             shift 2
             ;;
-        --name)
+        -n|--name)
             APP_NAME="$2"
             shift 2
             ;;
-        --desktop)
+        -d|--desktop)
             DESKTOP_NAME="$2"
             shift 2
             ;;
-        --icon)
+        -i|--icon)
             DO_ICON=true
             shift 1
             ;;
-        --schroot)
+        -s|--schroot)
             SCHROOT_NAME="$2"
             shift 2
             ;;
@@ -94,16 +98,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$EXE_PATH" ]]; then
-    echo "Error: Missing required argument --exe"
-    echo "Usage: $(basename "$0") --exe EXE --name NAME"
-    echo "Use --help for more information."
+    echo "Error: Missing required argument -e/--exe"
+    echo "Usage: $(basename "$0") -e EXE -n NAME"
+    echo "Use -h or --help for more information."
     exit 1
 fi
 
 if [[ -z "$APP_NAME" ]]; then
-    echo "Error: Missing required argument --name"
-    echo "Usage: $(basename "$0") --exe EXE --name NAME"
-    echo "Use --help for more information."
+    echo "Error: Missing required argument -n/--name"
+    echo "Usage: $(basename "$0") -e EXE -n NAME"
+    echo "Use -h or --help for more information."
     exit 1
 fi
 

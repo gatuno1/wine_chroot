@@ -135,9 +135,27 @@ uv run python/make_wine_chroot_desktop.py \
     --name "My Application" \
     --schroot "my-chroot"
 
+# Using short options (same as above)
+uv run python/make_wine_chroot_desktop.py \
+    -e "/path/to/program.exe" \
+    -n "My Application" \
+    -i \
+    -s "my-chroot" \
+    -d "custom.desktop"
+
 # Show CLI help
 uv run python/make_wine_chroot_desktop.py --help
 ```
+
+#### Available Options
+
+| Short | Long         | Required | Default        | Description                                    |
+|-------|--------------|----------|----------------|------------------------------------------------|
+| `-e`  | `--exe`      | Yes      | -              | Path to the .exe inside the schroot tree       |
+| `-n`  | `--name`     | Yes      | -              | Application name for the desktop menu          |
+| `-d`  | `--desktop`  | No       | Auto-generated | Custom .desktop filename                       |
+| `-i`  | `--icon`     | No       | False          | Extract icon from .exe using wrestool/icotool  |
+| `-s`  | `--schroot`  | No       | `debian-amd64` | Name of the schroot to use                     |
 
 ### Execution methods
 
@@ -207,9 +225,19 @@ The Bash script mirrors the functionality of the Python version.
     --name "My Application" \
     --schroot "my-chroot"
 
+# Using short options (same as above)
+./bash/make_wine_chroot_desktop.sh \
+    -e "/path/to/program.exe" \
+    -n "My Application" \
+    -i \
+    -s "my-chroot" \
+    -d "custom.desktop"
+
 # Show CLI help
 ./bash/make_wine_chroot_desktop.sh --help
 ```
+
+Both Python and Bash implementations support the same short options for convenience.
 
 **Note:** Ensure the script is executable:
 

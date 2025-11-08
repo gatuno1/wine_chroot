@@ -1,6 +1,7 @@
 # Python dependencies for make_wine_chroot_desktop.py
 rich
 rich-argparse
+pytest
 
 # Required system dependencies:
 #

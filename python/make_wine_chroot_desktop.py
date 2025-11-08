@@ -67,11 +67,11 @@ def extract_icon(exe_path: Path, icon_dir: Path, desktop_basename: str) -> Path 
             stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError as e:
-        console.print(f":warning: Failed to extract .ico with wrestool: {e}", style="yellow")
+        console.print(f"Failed to extract .ico with wrestool: {e}", style="yellow")
         return None
 
     if not tmp_ico.exists():
-        console.print(":warning: wrestool did not produce an .ico", style="yellow")
+        console.print("wrestool did not produce an .ico", style="yellow")
         return None
 
     # Step 2: icotool to /tmp/icoextract_py
@@ -86,12 +86,12 @@ def extract_icon(exe_path: Path, icon_dir: Path, desktop_basename: str) -> Path 
             stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError as e:
-        console.print(f":warning: Failed to convert .ico to .png: {e}", style="yellow")
+        console.print(f"Failed to convert .ico to .png: {e}", style="yellow")
         return None
 
     pngs = sorted(tmp_png_dir.glob("*.png"))
     if not pngs:
-        console.print(":warning: No extracted PNGs were found", style="yellow")
+        console.print("No extracted PNGs were found", style="yellow")
         return None
 
     # Pick the "largest" by filename (usually the last one)
@@ -99,8 +99,41 @@ def extract_icon(exe_path: Path, icon_dir: Path, desktop_basename: str) -> Path 
     icon_dir.mkdir(parents=True, exist_ok=True)
     final_icon = icon_dir / f"{desktop_basename}.png"
     shutil.copy(chosen_png, final_icon)
-    console.print(f":sparkles: Icon copied to {final_icon}", style="green")
+    console.print(f"Icon copied to '{final_icon}'", style="green")
     return final_icon
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Create and return the CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Generate a .desktop launcher that runs an .exe with Wine inside a schroot.",
+        formatter_class=RichHelpFormatter,
+    )
+    parser.add_argument(
+        "-e", "--exe",
+        required=True,
+        help="Path to the .exe as seen from the host inside the schroot tree",
+    )
+    parser.add_argument(
+        "-n", "--name",
+        required=True,
+        help="Application name displayed in the desktop menu",
+    )
+    parser.add_argument(
+        "-d", "--desktop",
+        help="Name of the .desktop file (defaults to a slugified app name)",
+    )
+    parser.add_argument(
+        "-i", "--icon",
+        action="store_true",
+        help="Attempt to extract the .exe icon using wrestool and icotool",
+    )
+    parser.add_argument(
+        "-s", "--schroot",
+        default="debian-amd64",
+        help="Name of the schroot to use (default: debian-amd64)",
+    )
+    return parser
 
 
 def main() -> None:
@@ -110,48 +143,31 @@ def main() -> None:
     schroot environment using Wine. Optionally, it can extract icons from the executable and
     populate the desktop entry with useful metadata.
     """
-    parser = argparse.ArgumentParser(
-        description="Generate a .desktop launcher that runs an .exe with Wine inside a schroot.",
-        formatter_class=RichHelpFormatter,
-    )
-    parser.add_argument(
-        "--exe",
-        required=True,
-        help="Path to the .exe as seen from the host inside the schroot tree",
-    )
-    parser.add_argument(
-        "--name",
-        required=True,
-        help="Application name displayed in the desktop menu",
-    )
-    parser.add_argument(
-        "--desktop",
-        help="Name of the .desktop file (defaults to a slugified app name)",
-    )
-    parser.add_argument(
-        "--icon",
-        action="store_true",
-        help="Attempt to extract the .exe icon using wrestool and icotool",
-    )
-    parser.add_argument(
-        "--schroot",
-        default="debian-amd64",
-        help="Name of the schroot to use (default: debian-amd64)",
-    )
+    parser = build_parser()
     args = parser.parse_args()
 
     exe_path = Path(args.exe).expanduser()
-    if not exe_path.exists():
-        console.print(f":x: The .exe does not exist at this path: {exe_path}", style="bold red")
+    try:
+        if not exe_path.exists():
+            console.print(f"The .exe does not exist at this path: '{exe_path}'", style="bold red")
+            console.print(
+                "    Remember that this must be the path as seen from the host, e.g.",
+                style="bold red",
+            )
+            console.print(
+                "    /srv/debian-amd64/root/.wine/drive_c/Program Files/...",
+                style="bold red",
+            )
+            raise SystemExit(1)
+    except PermissionError:
         console.print(
-            "    Remember that this must be the path as seen from the host, e.g.",
-            style="bold red",
+            f"Cannot verify if '{exe_path}' exists (permission denied).",
+            style="yellow",
         )
         console.print(
-            "    /srv/debian-amd64/root/.wine/drive_c/Program Files/...",
-            style="bold red",
+            "    Continuing anyway. If the path is incorrect, the .desktop launcher will fail.",
+            style="yellow",
         )
-        raise SystemExit(1)
 
     app_name = args.name
     # determine .desktop filename
@@ -192,7 +208,7 @@ def main() -> None:
         lines.append(f"Icon={icon_path}")
 
     desktop_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    console.print(f":memo: .desktop created at: {desktop_file}", style="cyan")
+    console.print(f"Desktop file created at: '{desktop_file}'", style="cyan")
 
     # try to refresh desktop database
     try:
@@ -207,7 +223,7 @@ def main() -> None:
         pass
 
     console.print()
-    console.print(":white_check_mark: Done.", style="bold green")
+    console.print("Done.", style="bold green")
     console.print(f'Look for "{app_name}" in your application menu.')
     console.print("If sudo prompts for a password, add a sudoers entry such as:")
     console.print("    YOURUSER ALL=(ALL) NOPASSWD: /usr/bin/schroot")
