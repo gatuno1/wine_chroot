@@ -196,7 +196,7 @@ def main() -> None:
         f"Name={app_name}",
         f"Comment=Run {app_name} inside the {args.schroot} schroot",
         # command executed when launching the shortcut
-        f'Exec=sudo schroot -c {args.schroot} -- wine "{win_exe_path}"',
+        f'Exec=pkexec schroot -c {args.schroot} -- wine "{win_exe_path}"',
         "Type=Application",
         "Categories=Wine;WindowsApps;",
         "StartupNotify=true",
