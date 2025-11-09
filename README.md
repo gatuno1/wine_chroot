@@ -1,4 +1,4 @@
-# Wine Chroot Project
+# Wine Chroot Project for ARM64
 
 This project ships two implementations, Python 3.10+ and Bash, designed to run on Debian Linux hosts.
 
