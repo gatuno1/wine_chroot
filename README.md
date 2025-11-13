@@ -6,6 +6,7 @@ This tool simplifies the entire workflow from chroot setup to application execut
 
 ## Features
 
+- **Automated Setup**: One-command chroot initialization with `wine-chroot init`
 - **Simple CLI Interface**: Unified command-line tool for all operations
 - **Desktop Integration**: Automatic .desktop launcher creation with icon extraction
 - **X11 Support**: Seamless GUI application integration with your desktop

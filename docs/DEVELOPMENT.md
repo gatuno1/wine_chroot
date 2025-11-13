@@ -132,13 +132,18 @@ wine_chroot/
 
 #### `cli.py`
 - **Purpose**: Command-line interface using argparse + rich-argparse
-- **Commands**: `run`, `desktop`, `list`, `config`, `init` (placeholder), `version`
+- **Commands**: `run`, `desktop`, `list`, `config`, `init`, `version`
 - **Key functions**: `build_parser()`, `cmd_*()`, `main()`
 
 #### `config.py`
 - **Purpose**: TOML configuration file management
 - **Key classes**: `Config`
 - **Features**: Default values, property accessors, file generation
+
+#### `chroot.py`
+- **Purpose**: Chroot initialization and management
+- **Key classes**: `ChrootManager`
+- **Features**: Automated chroot creation, debootstrap wrapper, Wine installation, verification
 
 #### `runner.py`
 - **Purpose**: Execute Windows applications through Wine in chroot

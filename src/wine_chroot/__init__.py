@@ -5,6 +5,13 @@
 
 This package provides tools to execute Windows amd64 applications on ARM64
 hardware using Wine within a Debian chroot environment.
+
+Features:
+- Automated chroot initialization with wine-chroot init
+- Wine execution wrapper for running Windows applications
+- Desktop integration with .desktop launcher creation
+- Icon extraction from Windows executables
+- TOML-based configuration management
 """
 
 __version__ = "0.1.0"

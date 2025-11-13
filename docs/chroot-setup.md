@@ -4,6 +4,8 @@ Este documento describe cómo ejecutar aplicaciones Windows x86/x64 en un sistem
 
 El objetivo es reemplazar la necesidad de emuladores parciales (como Box64 o CrossWine) mediante un entorno chroot real con soporte multi-arquitectura i386+amd64, ejecutado sobre QEMU user-static.
 
+> **Nota**: Este documento describe el proceso manual. Para instalación automatizada, usa el comando `wine-chroot init`. Ver [README.md](../README.md) para más información.
+
 ## Arquitectura del sistema
 
 | Componente             | Rol                                                | Descripción                         |

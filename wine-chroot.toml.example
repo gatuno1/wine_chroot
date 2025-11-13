@@ -1,5 +1,8 @@
 # Wine Chroot Configuration Example
 # Copy this file to ~/.config/wine-chroot.toml and customize as needed
+#
+# Generate this file automatically with: wine-chroot config --init
+# Create a new chroot automatically with: wine-chroot init
 
 [chroot]
 # Name of the schroot configuration

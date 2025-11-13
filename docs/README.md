@@ -12,11 +12,12 @@ Welcome to the Wine Chroot documentation! This directory contains comprehensive 
   - Common usage examples
   - Troubleshooting
 
-- **[Chroot Setup Guide](chroot-setup.md)** - Detailed instructions for creating the chroot environment
+- **[Chroot Setup Guide](chroot-setup.md)** - Manual setup instructions (for advanced users)
   - System architecture overview
-  - Step-by-step installation
+  - Step-by-step manual installation
   - Configuration details
   - Wine installation inside chroot
+  - Note: Use `wine-chroot init` for automated setup
   - (Spanish: "Notas de creación ambiente chroot")
 
 ### Developer Documentation
