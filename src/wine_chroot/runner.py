@@ -62,7 +62,8 @@ class WineRunner:
         cmd = [
             privilege_cmd,
             "schroot",
-            "-c", self.config.chroot_name,
+            "-c",
+            self.config.chroot_name,
             "--",
         ]
 
@@ -71,10 +72,12 @@ class WineRunner:
             display = os.environ.get("DISPLAY", ":0")
             xauthority = os.environ.get("XAUTHORITY", "")
 
-            cmd.extend([
-                "env",
-                f"DISPLAY={display}",
-            ])
+            cmd.extend(
+                [
+                    "env",
+                    f"DISPLAY={display}",
+                ]
+            )
 
             if xauthority:
                 cmd.append(f"XAUTHORITY={xauthority}")
@@ -122,13 +125,6 @@ class WineRunner:
                     console.print("[green]Application started in background[/]")
                 return 0
 
-        except subprocess.CalledProcessError as e:
-            console.print("[bold red]Error:[/] Failed to run application")
-            console.print(f"Exit code: {e.returncode}")
-            if e.stderr:
-                console.print(f"Error output: {e.stderr}")
-            return e.returncode
-
         except FileNotFoundError as exc:
             console.print(
                 f"[bold red]Error:[/] Command not found: {privilege_cmd}",
@@ -160,7 +156,8 @@ class WineRunner:
         cmd = [
             privilege_cmd,
             "schroot",
-            "-c", self.config.chroot_name,
+            "-c",
+            self.config.chroot_name,
             "--",
             "wine",
         ]

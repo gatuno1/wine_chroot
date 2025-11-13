@@ -67,9 +67,15 @@ def extract_icon(
         )
     except subprocess.CalledProcessError as e:
         if verbose:
-            console.print(f"[yellow]wrestool failed: {e.stderr}[/]")
+            console.print(
+                f"[yellow]wrestool failed: {e.stderr if e.stderr else 'unknown error'}[/]"
+            )
         else:
             console.print("[yellow]Warning:[/] Failed to extract .ico with wrestool")
+        return None
+    except FileNotFoundError:
+        console.print("[yellow]Warning:[/] wrestool command not found")
+        console.print("           Install with: sudo apt install icoutils")
         return None
 
     if not tmp_ico.exists():
@@ -89,9 +95,13 @@ def extract_icon(
         )
     except subprocess.CalledProcessError as e:
         if verbose:
-            console.print(f"[yellow]icotool failed: {e.stderr}[/]")
+            console.print(f"[yellow]icotool failed: {e.stderr if e.stderr else 'unknown error'}[/]")
         else:
             console.print("[yellow]Warning:[/] Failed to convert .ico to .png")
+        return None
+    except FileNotFoundError:
+        console.print("[yellow]Warning:[/] icotool command not found")
+        console.print("           Install with: sudo apt install icoutils")
         return None
 
     # Step 3: Find the largest PNG (usually the last one alphabetically)

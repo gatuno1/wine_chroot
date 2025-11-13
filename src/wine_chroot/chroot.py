@@ -73,7 +73,7 @@ class ChrootManager:
                 check=True,
             )
             return result.returncode == 0
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
             return False
 
     def initialize(
@@ -232,7 +232,7 @@ class ChrootManager:
             ) as progress:
                 task = progress.add_task("Installing base system...", total=None)
 
-                result = subprocess.run(
+                subprocess.run(
                     cmd,
                     capture_output=True,
                     text=True,
@@ -242,17 +242,20 @@ class ChrootManager:
 
                 progress.update(task, completed=True)
 
-            if result.returncode != 0:
-                console.print("[bold red]Error:[/] debootstrap failed")
-                if self.verbose:
-                    console.print(f"[dim]{result.stderr}[/]")
-                return False
-
             console.print("[green]✓[/] Base system created")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[bold red]Error:[/] debootstrap failed")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return False
         except subprocess.TimeoutExpired:
             console.print("[bold red]Error:[/] debootstrap timed out after 10 minutes")
+            return False
+        except FileNotFoundError:
+            console.print("[bold red]Error:[/] debootstrap command not found")
+            console.print("           Install with: sudo apt install debootstrap")
             return False
         except Exception as e:
             console.print(f"[bold red]Error:[/] {e}")
@@ -296,7 +299,7 @@ preserve-environment=true
 
         try:
             # Write config using sudo tee
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "tee", str(config_file)],
                 input=config_content,
                 capture_output=True,
@@ -304,13 +307,17 @@ preserve-environment=true
                 check=True,
             )
 
-            if result.returncode != 0:
-                console.print("[bold red]Error:[/] Failed to create schroot config")
-                return False
-
             console.print(f"[green]✓[/] Schroot configured: {config_file}")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[bold red]Error:[/] Failed to create schroot config")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return False
+        except FileNotFoundError:
+            console.print("[bold red]Error:[/] sudo or tee command not found")
+            return False
         except Exception as e:
             console.print(f"[bold red]Error:[/] {e}")
             return False
@@ -351,7 +358,7 @@ preserve-environment=true
                 console.print(f"[dim]Backed up existing fstab to {backup}[/]")
 
             # Write new fstab
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "tee", str(fstab_file)],
                 input=fstab_content,
                 capture_output=True,
@@ -359,13 +366,17 @@ preserve-environment=true
                 check=True,
             )
 
-            if result.returncode != 0:
-                console.print("[bold red]Error:[/] Failed to configure fstab")
-                return False
-
             console.print("[green]✓[/] Bind mounts configured")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[bold red]Error:[/] Failed to configure fstab")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return False
+        except FileNotFoundError:
+            console.print("[bold red]Error:[/] sudo, cp or tee command not found")
+            return False
         except Exception as e:
             console.print(f"[bold red]Error:[/] {e}")
             return False
@@ -388,28 +399,19 @@ preserve-environment=true
 
         try:
             # Install locales package
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "schroot", "-c", chroot_name, "--", "apt", "update"],
                 capture_output=True,
                 text=True,
                 check=True,
             )
 
-            if result.returncode != 0:
-                console.print("[yellow]Warning:[/] Failed to update apt inside chroot")
-                if self.verbose:
-                    console.print(f"[dim]{result.stderr}[/]")
-
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "schroot", "-c", chroot_name, "--", "apt", "install", "-y", "locales"],
                 capture_output=True,
                 text=True,
                 check=True,
             )
-
-            if result.returncode != 0:
-                console.print("[yellow]Warning:[/] Failed to install locales")
-                return True  # Continue anyway
 
             # Generate en_US.UTF-8 locale
             subprocess.run(
@@ -421,6 +423,16 @@ preserve-environment=true
             console.print("[green]✓[/] Locales configured")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[yellow]Warning:[/] Locale configuration failed")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return True  # Non-critical, continue
+        except FileNotFoundError:
+            console.print(
+                "[yellow]Warning:[/] Required commands not found for locale configuration"
+            )
+            return True  # Non-critical, continue
         except Exception as e:
             console.print(f"[yellow]Warning:[/] Locale configuration failed: {e}")
             return True  # Non-critical, continue
@@ -461,16 +473,12 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         try:
             # Write sources.list inside chroot
             cmd = f'echo "{sources_list}" | sudo tee /etc/apt/sources.list'
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "schroot", "-c", chroot_name, "--", "bash", "-c", cmd],
                 capture_output=True,
                 text=True,
                 check=True,
             )
-
-            if result.returncode != 0:
-                console.print("[yellow]Warning:[/] Failed to configure repositories")
-                return True  # Continue anyway
 
             # Update apt cache
             subprocess.run(
@@ -482,6 +490,16 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             console.print("[green]✓[/] Repositories configured")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[yellow]Warning:[/] Failed to configure repositories")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return True  # Non-critical, continue
+        except FileNotFoundError:
+            console.print(
+                "[yellow]Warning:[/] Required commands not found for repository configuration"
+            )
+            return True  # Non-critical, continue
         except Exception as e:
             console.print(f"[yellow]Warning:[/] {e}")
             return True  # Non-critical
@@ -503,16 +521,12 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             return True
 
         try:
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "schroot", "-c", chroot_name, "--", "dpkg", "--add-architecture", "i386"],
                 capture_output=True,
                 text=True,
                 check=True,
             )
-
-            if result.returncode != 0:
-                console.print("[yellow]Warning:[/] Failed to add i386 architecture")
-                return True  # Continue anyway
 
             # Update apt cache
             subprocess.run(
@@ -524,6 +538,14 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             console.print("[green]✓[/] i386 architecture enabled")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[yellow]Warning:[/] Failed to add i386 architecture")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return True  # Non-critical, continue
+        except FileNotFoundError:
+            console.print("[yellow]Warning:[/] Required commands not found for i386 configuration")
+            return True  # Non-critical, continue
         except Exception as e:
             console.print(f"[yellow]Warning:[/] {e}")
             return True  # Non-critical
@@ -552,7 +574,7 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             ) as progress:
                 task = progress.add_task("Installing Wine packages...", total=None)
 
-                result = subprocess.run(
+                subprocess.run(
                     [
                         "sudo",
                         "schroot",
@@ -577,17 +599,19 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
 
                 progress.update(task, completed=True)
 
-            if result.returncode != 0:
-                console.print("[bold red]Error:[/] Wine installation failed")
-                if self.verbose:
-                    console.print(f"[dim]{result.stderr}[/]")
-                return False
-
             console.print("[green]✓[/] Wine installed successfully")
             return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[bold red]Error:[/] Wine installation failed")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return False
         except subprocess.TimeoutExpired:
             console.print("[bold red]Error:[/] Wine installation timed out")
+            return False
+        except FileNotFoundError:
+            console.print("[bold red]Error:[/] Required commands not found for Wine installation")
             return False
         except Exception as e:
             console.print(f"[bold red]Error:[/] {e}")
@@ -606,17 +630,13 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
 
         try:
             # Check if we can enter the chroot
-            result = subprocess.run(
+            subprocess.run(
                 ["sudo", "schroot", "-c", chroot_name, "--", "echo", "test"],
                 capture_output=True,
                 text=True,
                 timeout=5,
                 check=True,
             )
-
-            if result.returncode != 0:
-                console.print("[yellow]Warning:[/] Cannot enter chroot")
-                return False
 
             # Check Wine version
             result = subprocess.run(
@@ -627,13 +647,21 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
                 check=True,
             )
 
-            if result.returncode == 0:
-                version = result.stdout.strip()
-                console.print(f"[green]✓[/] Wine version: {version}")
-                return True
-            console.print("[yellow]Warning:[/] Wine not working correctly")
-            return False
+            version = result.stdout.strip()
+            console.print(f"[green]✓[/] Wine version: {version}")
+            return True
 
+        except subprocess.CalledProcessError as e:
+            console.print("[yellow]Warning:[/] Verification failed - command returned error")
+            if self.verbose and e.stderr:
+                console.print(f"[dim]{e.stderr}[/]")
+            return False
+        except subprocess.TimeoutExpired:
+            console.print("[yellow]Warning:[/] Verification timed out")
+            return False
+        except FileNotFoundError:
+            console.print("[yellow]Warning:[/] Required commands not found for verification")
+            return False
         except Exception as e:
             console.print(f"[yellow]Warning:[/] Verification failed: {e}")
             return False

@@ -159,13 +159,18 @@ class DesktopManager:
         try:
             subprocess.run(
                 ["update-desktop-database", str(desktop_dir)],
-                check=False,
+                check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
             )
             if self.verbose:
                 console.print("[dim]Desktop database updated[/]")
+        except subprocess.CalledProcessError as e:
+            if self.verbose:
+                console.print(
+                    f"[dim]update-desktop-database failed: {e.stderr if e.stderr else 'unknown error'}[/]",
+                )
         except FileNotFoundError:
             if self.verbose:
                 console.print(

@@ -223,7 +223,8 @@ def format_size(size_bytes: int) -> str:
         return f"{size_bytes} B"
 
     size_float = float(size_bytes)
-    for unit in {"KB", "MB", "GB", "TB"}:
+    for unit in ["KB", "MB", "GB", "TB"]:
+        size_float /= 1024.0
         if size_float < 1024.0:
             return f"{size_float:.1f} {unit}"
     return f"{size_float:.1f} PB"
