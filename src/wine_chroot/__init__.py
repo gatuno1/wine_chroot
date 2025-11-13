@@ -7,6 +7,6 @@ This package provides tools to execute Windows amd64 applications on ARM64
 hardware using Wine within a Debian chroot environment.
 """
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"
 __author__ = "Wine Chroot Contributors"
 __license__ = "GPL-3.0-or-later"

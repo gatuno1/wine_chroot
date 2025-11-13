@@ -1,6 +1,6 @@
 [project]
 name = "wine-chroot"
-version = "1.0.0"
+version = "0.1.0"
 description = "Run Windows amd64 applications on ARM64 Linux using Wine in a Debian chroot"
 readme = "README.md"
 requires-python = ">=3.10"
