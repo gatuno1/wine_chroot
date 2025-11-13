@@ -33,7 +33,7 @@ ENV/
 
 # uv
 .python-version
-uv.lock
+# Keep uv.lock for reproducible builds
 
 # IDE
 .vscode/
@@ -53,3 +53,7 @@ htmlcov/
 
 # Logs
 *.log
+
+# Configuration (user-specific)
+wine-chroot.toml
+!wine-chroot.toml.example

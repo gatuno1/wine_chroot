@@ -1,37 +1,103 @@
 [project]
 name = "wine-chroot"
-version = "0.1.0"
-description = "Generate .desktop launchers that run Windows apps with Wine inside Debian schroot environments"
+version = "1.0.0"
+description = "Run Windows amd64 applications on ARM64 Linux using Wine in a Debian chroot"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-	"rich",
-	"rich-argparse",
-	"pytest",
-]
 license = { file = "LICENSE" }
-classifiers = [
-	"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-	"Programming Language :: Python :: 3",
-	"Programming Language :: Python :: 3 :: Only",
-	"Programming Language :: Python :: 3.10",
-	"Programming Language :: Python :: 3.11",
-	"Programming Language :: Python :: 3.12",
+authors = [
+    { name = "Wine Chroot Contributors" }
 ]
-# Python dependencies are managed with uv.
-# System dependencies:
-#   Host: schroot, icoutils (wrestool, icotool)
-#   Chroot: wine
+keywords = ["wine", "chroot", "arm64", "windows", "debian", "emulation"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+    "Topic :: System :: Emulators",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "rich>=13.0.0",
+    "rich-argparse>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+]
+
+# Python 3.10 requires tomli for TOML parsing
+tomli = [
+    "tomli>=2.0.0; python_version < '3.11'",
+]
 
 [project.scripts]
-wine-chroot = "python.make_wine_chroot_desktop:main"
+wine-chroot = "wine_chroot.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gatuno/wine_chroot"
+Issues = "https://github.com/gatuno/wine_chroot/issues"
+Repository = "https://github.com/gatuno/wine_chroot"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["python"]
+packages = ["src/wine_chroot"]
 
-[dependency-groups]
-dev = []
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/",
+    "docs/",
+    "tests/",
+    "LICENSE",
+    "README.md",
+    "CLAUDE.md",
+    "wine-chroot.toml.example",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=wine_chroot",
+    "--cov-report=term-missing",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+# System dependencies (not managed by Python):
+# Host: schroot, debootstrap, qemu-user-static, binfmt-support, icoutils
+# Chroot: wine, wine32, wine64, winetricks

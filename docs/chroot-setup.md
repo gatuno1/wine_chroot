@@ -140,7 +140,7 @@ apt update
 Ejecutar dentro del ambiente *chroot*:
 
 ```bash
-apt install -y wine  wine32 wine64 winetricks wine-binfmt fonts-wine q4wine --install-recommends
+apt install -y wine wine32 wine64 winetricks wine-binfmt fonts-wine q4wine --install-recommends
 ```
 
 donde:
