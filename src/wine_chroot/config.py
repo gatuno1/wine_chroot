@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from rich.console import Console
 
@@ -32,13 +32,13 @@ class Config:
         Path("wine-chroot.toml"),
     ]
 
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         """Initialize configuration.
 
         Args:
             config_path: Explicit path to config file, or None to search defaults
         """
-        self.config_path: Optional[Path] = None
+        self.config_path: Path | None = None
         self.data: dict[str, Any] = {}
 
         if config_path:
@@ -146,7 +146,7 @@ class Config:
             data = data[k]
         data[keys[-1]] = value
 
-    def save(self, path: Optional[Path] = None) -> None:
+    def save(self, path: Path | None = None) -> None:
         """Save configuration to TOML file.
 
         Args:
@@ -189,8 +189,9 @@ class Config:
                     f.write(f"{key} = {str(value).lower()}\n")
                 elif isinstance(value, list):
                     # Format lists
-                    items = ", ".join(f'"{item}"' if isinstance(item, str) else str(item)
-                                      for item in value)
+                    items = ", ".join(
+                        f'"{item}"' if isinstance(item, str) else str(item) for item in value
+                    )
                     f.write(f"{key} = [{items}]\n")
                 else:
                     f.write(f"{key} = {value}\n")
@@ -208,8 +209,10 @@ class Config:
                         elif isinstance(subvalue, bool):
                             f.write(f"{subkey} = {str(subvalue).lower()}\n")
                         elif isinstance(subvalue, list):
-                            items = ", ".join(f'"{item}"' if isinstance(item, str) else str(item)
-                                              for item in subvalue)
+                            items = ", ".join(
+                                f'"{item}"' if isinstance(item, str) else str(item)
+                                for item in subvalue
+                            )
                             f.write(f"{subkey} = [{items}]\n")
                         else:
                             f.write(f"{subkey} = {subvalue}\n")
@@ -237,18 +240,22 @@ class Config:
     @property
     def applications_dir(self) -> Path:
         """Get applications directory as Path object."""
-        return Path(self.get(
-            "desktop.applications_dir",
-            str(Path.home() / ".local" / "share" / "applications"),
-        ))
+        return Path(
+            self.get(
+                "desktop.applications_dir",
+                str(Path.home() / ".local" / "share" / "applications"),
+            )
+        )
 
     @property
     def icon_dir(self) -> Path:
         """Get icon directory as Path object."""
-        return Path(self.get(
-            "desktop.icon_dir",
-            str(Path.home() / ".local" / "share" / "icons"),
-        ))
+        return Path(
+            self.get(
+                "desktop.icon_dir",
+                str(Path.home() / ".local" / "share" / "icons"),
+            )
+        )
 
 
 def create_example_config(output_path: Path) -> None:
@@ -257,7 +264,7 @@ def create_example_config(output_path: Path) -> None:
     Args:
         output_path: Path where to create the example config
     """
-    example = '''# Wine Chroot Configuration
+    example = """# Wine Chroot Configuration
 # This file configures the wine-chroot tool
 
 [chroot]
@@ -285,7 +292,7 @@ x11_forwarding = true
 # name = "Notepad++"
 # exe = "C:\\\\Program Files\\\\Notepad++\\\\notepad++.exe"
 # icon = "~/.local/share/icons/notepad-plus-plus.png"
-'''
+"""
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:

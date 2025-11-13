@@ -8,7 +8,6 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -124,20 +123,20 @@ class WineRunner:
                 return 0
 
         except subprocess.CalledProcessError as e:
-            console.print(f"[bold red]Error:[/] Failed to run application")
+            console.print("[bold red]Error:[/] Failed to run application")
             console.print(f"Exit code: {e.returncode}")
             if e.stderr:
                 console.print(f"Error output: {e.stderr}")
             return e.returncode
 
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
             console.print(
                 f"[bold red]Error:[/] Command not found: {privilege_cmd}",
             )
             console.print(
                 f"Please install {privilege_cmd} or update your configuration",
             )
-            raise SystemExit(1)
+            raise SystemExit(1) from exc
 
     def run_wine_command(
         self,
@@ -196,7 +195,7 @@ class WineRunner:
 
         return False
 
-    def get_wine_version(self) -> Optional[str]:
+    def get_wine_version(self) -> str | None:
         """Get the Wine version installed in the chroot.
 
         Returns:

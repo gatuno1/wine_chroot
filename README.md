@@ -122,21 +122,32 @@ wine-chroot --version
 
 ### Setting Up the Chroot
 
-Follow the detailed guide in [docs/chroot-setup.md](docs/chroot-setup.md) to create and configure your Debian amd64 chroot with Wine.
+**Option 1: Automated Setup (Recommended)**
 
-**Quick summary:**
+Use the `wine-chroot init` command to automatically create and configure the chroot:
 
 ```bash
-# 1. Create the chroot named 'debian-amd64'
-sudo debootstrap --arch=amd64 trixie /srv/debian-amd64 http://deb.debian.org/debian
+# Initialize with default settings
+wine-chroot init
 
-# 2. Configure schroot (see docs/chroot-setup.md)
+# Or customize the installation
+wine-chroot init --name my-wine-chroot --path /opt/wine-chroot
 
-# 3. Enter chroot and install Wine
-sudo schroot -c debian-amd64
-apt update && apt install wine wine32 wine64 wine-binfmt fonts-wine  --install-recommends
-exit
+# Preview what will be done without making changes
+wine-chroot init --dry-run
 ```
+
+The init command will:
+
+- Create a Debian amd64 chroot using debootstrap
+- Configure schroot and bind mounts
+- Install Wine (wine, wine32, wine64)
+- Set up locales and repositories
+- Verify the installation
+
+**Option 2: Manual Setup**
+
+If you prefer manual configuration or need more control, follow the detailed guide in [docs/chroot-setup.md](docs/chroot-setup.md).
 
 ### Configuration
 
@@ -161,6 +172,45 @@ use_pkexec = false  # Use sudo (false) or pkexec (true)
 See [wine-chroot.toml.example](wine-chroot.toml.example) for all options.
 
 ## Usage
+
+### Initializing a Chroot (First Time Setup)
+
+If you haven't set up a chroot yet, use the `init` command:
+
+```bash
+# Basic initialization (uses default settings)
+wine-chroot init
+
+# Custom location
+wine-chroot init --name wine-testing --path /opt/wine-testing
+
+# Different Debian version
+wine-chroot init --debian-version bookworm
+
+# Skip Wine installation (install manually later)
+wine-chroot init --skip-wine
+
+# Dry-run to see what will happen
+wine-chroot init --dry-run
+```
+
+**What the init command does:**
+
+1. ✓ Checks system prerequisites
+2. ✓ Creates Debian amd64 base system with debootstrap
+3. ✓ Configures schroot profile
+4. ✓ Sets up bind mounts (fstab)
+5. ✓ Configures locales
+6. ✓ Adds Debian repositories
+7. ✓ Enables i386 architecture (for 32-bit Wine)
+8. ✓ Installs Wine packages
+9. ✓ Verifies installation
+
+**Time and space requirements:**
+
+- Download size: ~200-500 MB
+- Disk space needed: ~2-3 GB
+- Time: 10-30 minutes (depending on internet speed)
 
 ### Running Windows Applications
 

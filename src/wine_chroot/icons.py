@@ -8,7 +8,6 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -20,7 +19,7 @@ def extract_icon(
     icon_dir: Path,
     icon_name: str,
     verbose: bool = False,
-) -> Optional[Path]:
+) -> Path | None:
     """Extract icon from .exe file using wrestool and icotool.
 
     Args:
@@ -124,7 +123,7 @@ def extract_icon(
     return final_icon
 
 
-def find_system_icon(app_name: str) -> Optional[str]:
+def find_system_icon(app_name: str) -> str | None:
     """Try to find a system icon that matches the application name.
 
     Args:

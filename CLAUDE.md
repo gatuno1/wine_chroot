@@ -393,36 +393,38 @@ The tool uses `sudo` for schroot access by default instead of `pkexec` for the f
 ## Implementation Phases
 
 ### Phase 1: Core Restructuring ✓
-- Create new src/wine_chroot/ package structure
-- Move and refactor existing code
-- Update pyproject.toml with new entry points
-- Create CLAUDE.md (this file)
+- ✅ Create new src/wine_chroot/ package structure
+- ✅ Move and refactor existing code
+- ✅ Update pyproject.toml with new entry points
+- ✅ Create CLAUDE.md (this file)
 
-### Phase 2: Configuration System
-- Implement config.py with TOML support
-- Create wine-chroot.toml.example
-- Add config validation and migration
+### Phase 2: Configuration System ✓
+- ✅ Implement config.py with TOML support
+- ✅ Create wine-chroot.toml.example
+- ✅ Add config validation and property accessors
 
-### Phase 3: CLI Commands
-- Implement cli.py with Click or argparse + rich-argparse
-- Create subcommands: init, run, desktop, list
-- Add --verbose and --config flags
+### Phase 3: CLI Commands ✓
+- ✅ Implement cli.py with argparse + rich-argparse
+- ✅ Create subcommands: run, desktop, list, config, init
+- ✅ Add --verbose and --config flags
 
-### Phase 4: Chroot Management
-- Implement chroot.py with init functionality
-- Automate debootstrap, schroot config, Wine installation
-- Add safety checks and rollback on failure
+### Phase 4: Chroot Management ✓
+- ✅ Implement chroot.py with init functionality
+- ✅ Automate debootstrap, schroot config, Wine installation
+- ✅ Add safety checks and dry-run mode
+- ✅ Progress indicators for long operations
 
-### Phase 5: Desktop Integration
-- Enhance desktop.py with icon extraction
-- Implement list command with app discovery
-- Add bulk .desktop creation
+### Phase 5: Desktop Integration ✓
+- ✅ Implement desktop.py with icon extraction
+- ✅ Implement list command with app discovery
+- ✅ Desktop file generation with proper metadata
 
-### Phase 6: Documentation & Testing
-- Update README.md with new CLI usage
-- Create docs/chroot-setup.md with detailed guide
-- Add comprehensive tests
-- Create installation script
+### Phase 6: Documentation & Testing ✓
+- ✅ Update README.md with new CLI usage
+- ✅ Create docs/chroot-setup.md with detailed guide
+- ✅ Create docs/DEVELOPMENT.md for contributors
+- ✅ Comprehensive project documentation
+- ⏳ Add comprehensive unit tests (in progress)
 
 ## Future Enhancements
 

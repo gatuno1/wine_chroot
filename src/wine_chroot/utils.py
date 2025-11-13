@@ -9,7 +9,6 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -173,7 +172,7 @@ def slugify(text: str) -> str:
     return slug
 
 
-def validate_exe_path(exe_path: Path, chroot_path: Optional[Path] = None) -> bool:
+def validate_exe_path(exe_path: Path, chroot_path: Path | None = None) -> bool:
     """Validate that an .exe path exists and is accessible.
 
     Args:
@@ -220,8 +219,11 @@ def format_size(size_bytes: int) -> str:
     Returns:
         Formatted string (e.g., "1.5 GB")
     """
-    for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} PB"
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+
+    size_float = float(size_bytes)
+    for unit in {"KB", "MB", "GB", "TB"}:
+        if size_float < 1024.0:
+            return f"{size_float:.1f} {unit}"
+    return f"{size_float:.1f} PB"

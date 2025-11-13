@@ -14,6 +14,7 @@ from rich.table import Table
 from rich_argparse import RichHelpFormatter
 
 from . import __version__
+from .chroot import ChrootManager
 from .config import Config, create_example_config
 from .desktop import DesktopManager
 from .runner import WineRunner
@@ -207,14 +208,35 @@ def cmd_init(args: argparse.Namespace, config: Config) -> int:
     Returns:
         Exit code
     """
-    console.print("[bold red]Error:[/] The 'init' command is not yet implemented")
-    console.print()
-    console.print("To manually set up a chroot, follow the guide:")
-    console.print("  docs/chroot-setup.md")
-    console.print()
-    console.print("Or refer to the Spanish guide:")
-    console.print('  "Notas de creación ambiente chroot.md"')
-    return 1
+    manager = ChrootManager(config, verbose=args.verbose)
+
+    # Show confirmation if not in dry-run mode
+    if not args.dry_run:
+        chroot_path = Path(args.path) if args.path else config.chroot_path
+
+        console.print("\n[bold yellow]⚠ Warning:[/] This will create a new chroot environment")
+        console.print(f"Installation path: [cyan]{chroot_path}[/]")
+        console.print("\nThis operation will:")
+        console.print("  • Download ~200-500 MB of Debian packages")
+        console.print("  • Require root access (sudo)")
+        console.print("  • Take 10-30 minutes depending on your internet connection")
+        console.print()
+
+        response = input("Continue? [y/N]: ").strip().lower()
+        if response not in ["y", "yes"]:
+            console.print("\n[yellow]Cancelled by user[/]")
+            return 1
+
+    # Run initialization
+    success = manager.initialize(
+        chroot_name=args.name if args.name else None,
+        chroot_path=Path(args.path) if args.path else None,
+        debian_version=args.debian_version,
+        skip_wine=args.skip_wine,
+        dry_run=args.dry_run,
+    )
+
+    return 0 if success else 1
 
 
 def cmd_version(args: argparse.Namespace, config: Config) -> int:
@@ -251,13 +273,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "-c", "--config",
+        "-c",
+        "--config",
         type=Path,
         help="Path to wine-chroot.toml configuration file",
     )
 
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Enable verbose output",
     )
@@ -303,22 +327,26 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=RichHelpFormatter,
     )
     desktop_parser.add_argument(
-        "-e", "--exe",
+        "-e",
+        "--exe",
         required=True,
         help="Path to .exe file",
     )
     desktop_parser.add_argument(
-        "-n", "--name",
+        "-n",
+        "--name",
         required=True,
         help="Application name for the menu",
     )
     desktop_parser.add_argument(
-        "-i", "--icon",
+        "-i",
+        "--icon",
         action="store_true",
         help="Extract icon from .exe",
     )
     desktop_parser.add_argument(
-        "-d", "--desktop",
+        "-d",
+        "--desktop",
         help="Custom .desktop filename",
     )
 
@@ -352,31 +380,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Create example configuration file",
     )
     config_parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output path for --init (default: ~/.config/wine-chroot.toml)",
     )
 
-    # init command (placeholder)
+    # init command
     init_parser = subparsers.add_parser(
         "init",
-        help="Initialize a new chroot environment (not yet implemented)",
+        help="Initialize a new chroot environment",
         formatter_class=RichHelpFormatter,
     )
     init_parser.add_argument(
         "--name",
-        default="debian-amd64",
-        help="Chroot name",
+        help="Chroot name (default: from config or 'debian-amd64')",
     )
     init_parser.add_argument(
         "--path",
         type=Path,
-        default=Path("/srv/debian-amd64"),
-        help="Chroot installation path",
+        help="Chroot installation path (default: from config or '/srv/debian-amd64')",
     )
     init_parser.add_argument(
         "--debian-version",
         default="trixie",
-        help="Debian version",
+        help="Debian version to install (default: trixie)",
+    )
+    init_parser.add_argument(
+        "--skip-wine",
+        action="store_true",
+        help="Don't install Wine automatically",
+    )
+    init_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
     )
 
     return parser

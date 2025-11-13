@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -36,7 +35,7 @@ class DesktopManager:
         exe_path: Path,
         app_name: str,
         extract_icon_flag: bool = False,
-        desktop_filename: Optional[str] = None,
+        desktop_filename: str | None = None,
     ) -> Path:
         """Create a .desktop launcher for a Windows application.
 
@@ -71,7 +70,7 @@ class DesktopManager:
         win_exe_path = linux_path_to_windows(exe_path)
 
         # Extract icon if requested
-        icon_path: Optional[Path] = None
+        icon_path: Path | None = None
         if extract_icon_flag:
             icon_name = slugify(app_name)
             icon_path = extract_icon(
@@ -91,19 +90,22 @@ class DesktopManager:
         # Build Exec command
         privilege_cmd = "pkexec" if self.config.use_pkexec else "sudo"
         exec_line = (
-            f'Exec={privilege_cmd} schroot -c {self.config.chroot_name} '
-            f'-- wine "{win_exe_path}"'
+            f'Exec={privilege_cmd} schroot -c {self.config.chroot_name} -- wine "{win_exe_path}"'
         )
         lines.append(exec_line)
 
         # Standard fields
-        lines.extend([
-            "Type=Application",
-            f"Categories={';'.join(self.config.get('desktop.categories', ['Wine', 'WindowsApps']))};",
-            "StartupNotify=true",
-            "Terminal=false",
-            f"StartupWMClass={Path(win_exe_path).name}",
-        ])
+        lines.extend(
+            [
+                "Type=Application",
+                f"Categories={
+                    ';'.join(self.config.get('desktop.categories', ['Wine', 'WindowsApps']))
+                };",
+                "StartupNotify=true",
+                "Terminal=false",
+                f"StartupWMClass={Path(win_exe_path).name}",
+            ]
+        )
 
         # Add icon if available
         if icon_path:
@@ -131,14 +133,16 @@ class DesktopManager:
                 "[yellow]Note:[/] Using pkexec may cause issues with some applications.",
             )
             console.print(
-                "       Consider using sudo for better reliability (set use_pkexec = false in config).",
+                "       Consider using sudo for better reliability "
+                "(set use_pkexec = false in config).",
             )
         else:
             console.print(
                 "[yellow]Tip:[/] To avoid password prompts when launching, add a sudoers entry:",
             )
             console.print(
-                "     echo '$USER ALL=(ALL) NOPASSWD: /usr/bin/schroot' | sudo tee /etc/sudoers.d/schroot",
+                "     echo '$USER ALL=(ALL) NOPASSWD: /usr/bin/schroot' | "
+                "sudo tee /etc/sudoers.d/schroot",
             )
             console.print(
                 "     sudo chmod 0440 /etc/sudoers.d/schroot",
@@ -158,6 +162,7 @@ class DesktopManager:
                 check=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                text=True,
             )
             if self.verbose:
                 console.print("[dim]Desktop database updated[/]")
@@ -245,10 +250,18 @@ class DesktopManager:
                 exe_name = exe_file.name.lower()
 
                 # Skip common non-application executables
-                if any(skip in exe_name for skip in [
-                    "unins", "uninst", "uninstall",
-                    "update", "updater", "setup", "install",
-                ]):
+                if any(
+                    skip in exe_name
+                    for skip in [
+                        "unins",
+                        "uninst",
+                        "uninstall",
+                        "update",
+                        "updater",
+                        "setup",
+                        "install",
+                    ]
+                ):
                     continue
 
                 # Check if a .desktop file exists
@@ -262,11 +275,13 @@ class DesktopManager:
                     except Exception:
                         continue
 
-                applications.append({
-                    "name": exe_file.stem,
-                    "path": exe_file,
-                    "win_path": linux_path_to_windows(exe_file),
-                    "has_desktop": desktop_exists,
-                })
+                applications.append(
+                    {
+                        "name": exe_file.stem,
+                        "path": exe_file,
+                        "win_path": linux_path_to_windows(exe_file),
+                        "has_desktop": desktop_exists,
+                    }
+                )
 
         return applications
