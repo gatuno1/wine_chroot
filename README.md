@@ -54,72 +54,71 @@ This tool simplifies the entire workflow from chroot setup to application execut
 
 ### Installation
 
-1. **Clone the repository:**
+1 **Clone the repository:**
 
 ```bash
 git clone https://github.com/gatuno/wine_chroot.git
 cd wine_chroot
 ```
 
-2. **Install uv (if not already installed):**
+2 **Install uv (if not already installed):**
 
 ```bash
 # Install uv using the official install script
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Reload your shell configuration
-source ~/.bashrc  # or source ~/.zshrc for zsh
+if [ -n "$BASH_VERSION" ]; then
+    source ~/.bashrc
+elif [ -n "$ZSH_VERSION" ]; then
+    source ~/.zshrc
+elif [ -n "$FISH_VERSION" ]; then
+    source ~/.config/fish/config.fish
+fi
 
 # Install shell autocompletion (optional but recommended)
 # For bash:
 if [ -n "$BASH_VERSION" ]; then
     echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc
     echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
-fi
-
 # For zsh:
-if [ -n "$ZSH_VERSION" ]; then
+elif [ -n "$ZSH_VERSION" ]; then
     echo 'eval "$(uv generate-shell-completion zsh)"' >> ~/.zshrc
     echo 'eval "$(uvx --generate-shell-completion zsh)"' >> ~/.zshrc
+# For fish:
+elif [ -n "$FISH_VERSION" ]; then
+    uv generate-shell-completion fish > ~/.config/fish/completions/uv.fish
+    uvx --generate-shell-completion fish > ~/.config/fish/completions/uvx.fish
 fi
 
-# For fish:
-# uv generate-shell-completion fish > ~/.config/fish/completions/uv.fish
-# uvx --generate-shell-completion fish > ~/.config/fish/completions/uvx.fish
-
 # Reload shell again to enable autocompletion
-source ~/.bashrc  # or source ~/.zshrc
+if [ -n "$BASH_VERSION" ]; then
+    source ~/.bashrc
+elif [ -n "$ZSH_VERSION" ]; then
+    source ~/.zshrc
+elif [ -n "$FISH_VERSION" ]; then
+    source ~/.config/fish/config.fish
+fi
 ```
 
-3. **Install system dependencies:**
+3 **Install system dependencies:**
 
 ```bash
 sudo apt update
 sudo apt install schroot debootstrap qemu-user-static binfmt-support icoutils
 ```
 
-4. **Install wine-chroot:**
+4 **Install wine-chroot:**
 
 ```bash
-# Option 1: Install in development mode (recommended for testing/development)
-# This creates an editable installation that reflects code changes immediately
+# Install the package
 uv pip install -e .
 
 # Verify installation
 wine-chroot --version
-
-# Option 2: Run directly with uv (no installation needed)
-# This is useful for trying the tool without installing
-uv run wine-chroot --help
 ```
 
-**Why development mode?**
-Installing with `-e` (editable mode) is useful because:
-
-- Changes to the code are reflected immediately without reinstalling
-- You can customize the tool for your needs
-- Easy to contribute improvements back to the project
-- The `wine-chroot` command becomes available system-wide
+> **For developers**: See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed development setup, including why to use editable mode (`-e`) and alternative installation methods.
 
 ### Setting Up the Chroot
 
@@ -266,41 +265,42 @@ wine_chroot/
 │       ├── icons.py         # Icon extraction
 │       └── utils.py         # Utilities
 ├── docs/
-│   └── chroot-setup.md      # Detailed setup guide
+│   ├── README.md            # Documentation index
+│   ├── chroot-setup.md      # Detailed chroot setup guide
+│   └── DEVELOPMENT.md       # Development guide
 ├── tests/                   # Unit tests
 ├── pyproject.toml           # Project metadata
 ├── wine-chroot.toml.example # Example configuration
-├── CLAUDE.md                # Development guidelines
+├── CLAUDE.md                # AI assistant guidelines
 └── README.md                # This file
 ```
 
 ## Development
 
-### Setting Up Development Environment
+Want to contribute or customize wine-chroot? Check out the comprehensive development guide:
+
+**[📖 Development Guide](docs/DEVELOPMENT.md)**
+
+The guide covers:
+
+- Development environment setup
+- Project architecture and module overview
+- Code style guidelines and best practices
+- Testing and debugging
+- Contributing workflow
+- Building and packaging
+
+Quick start for developers:
 
 ```bash
-# Install development dependencies
+# Install in editable mode with dev dependencies
 uv pip install -e ".[dev]"
 
 # Run tests
 pytest
 
-# Run linter
+# Check code style
 ruff check src/
-
-# Format code
-ruff format src/
-```
-
-### Running from Source
-
-```bash
-# Use uv to run directly
-uv run wine-chroot --help
-
-# Or activate virtual environment
-source .venv/bin/activate
-wine-chroot --help
 ```
 
 ## Troubleshooting
@@ -368,9 +368,10 @@ echo $DISPLAY
 
 ### Getting Help
 
-- Check [docs/chroot-setup.md](docs/chroot-setup.md) for detailed setup instructions
-- See [CLAUDE.md](CLAUDE.md) for development guidelines
-- Open an issue on GitHub for bugs or feature requests
+- **Setup issues**: Check [docs/chroot-setup.md](docs/chroot-setup.md) for detailed chroot configuration
+- **Development questions**: See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development guidelines
+- **Bugs or features**: Open an issue on GitHub
+- **General questions**: Use GitHub Discussions
 
 ## Comparison with Other Solutions
 
@@ -394,12 +395,13 @@ See the [LICENSE](LICENSE) file for the full license text.
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Please see the [Development Guide](docs/DEVELOPMENT.md) for:
 
-1. Follow the code style in [CLAUDE.md](CLAUDE.md)
-2. Add tests for new functionality
-3. Update documentation as needed
-4. Use conventional commits (feat:, fix:, docs:, etc.)
+- Setting up your development environment
+- Code style guidelines
+- Testing requirements
+- Pull request process
+- Commit message conventions
 
 ## Acknowledgments
 
