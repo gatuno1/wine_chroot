@@ -103,8 +103,10 @@ def check_system_dependencies(verbose: bool = False) -> tuple[bool, list[str]]:
     for cmd, description in required.items():
         # Special case: qemu can have different names
         if cmd == "qemu-user-static":
-            if not (check_command_exists("qemu-x86_64-static") or
-                    check_command_exists("qemu-user-static")):
+            if not (
+                check_command_exists("qemu-x86_64-static")
+                or check_command_exists("qemu-user-static")
+            ):
                 missing.append(cmd)
                 if verbose:
                     console.print(f"[yellow]✗[/yellow] {cmd}: {description}")
@@ -141,7 +143,7 @@ def run_command(
         subprocess.CalledProcessError: If check=True and command fails
     """
     if verbose:
-        command(' '.join(cmd))
+        command(" ".join(cmd))
 
     return subprocess.run(
         cmd,

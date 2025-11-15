@@ -316,9 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-p",
         "--path",
         type=Path,
-        help=(
-            "Chroot installation path (default: from config)"
-        ),
+        help=("Chroot installation path (default: from config)"),
     )
     init_parser.add_argument(
         "--debian-version",
@@ -449,8 +447,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-o",
         "--output",
         help=(
-            "Output path for --init "
-            "(default: [argparse.default]'~/.config/wine-chroot.toml'[/])"
+            "Output path for --init (default: [argparse.default]'~/.config/wine-chroot.toml'[/])"
         ),
     )
 
@@ -513,7 +510,8 @@ def main() -> int:
     except KeyboardInterrupt:
         warning("\nInterrupted")
         return 130
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
+        # Top-level catch-all for any unhandled exceptions
         if args.verbose:
             console.print_exception()
         else:

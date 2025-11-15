@@ -256,12 +256,20 @@ class ChrootManager:
             return False
         except FileNotFoundError:
             error(
-                "debootstrap command not found",
-                hint="Install with: sudo apt install debootstrap"
+                "debootstrap command not found", hint="Install with: sudo apt install debootstrap"
             )
             return False
-        except Exception as e:
-            error(str(e))
+        except PermissionError:
+            error(
+                "Permission denied running debootstrap",
+                hint="This operation requires root privileges",
+            )
+            return False
+        except OSError as e:
+            error(
+                f"System error running debootstrap: {e}",
+                hint="Check disk space and filesystem availability",
+            )
             return False
 
     def _configure_schroot(
@@ -322,8 +330,14 @@ preserve-environment=true
         except FileNotFoundError:
             error("sudo or tee command not found")
             return False
-        except Exception as e:
-            error(str(e))
+        except PermissionError:
+            error(
+                "Permission denied creating schroot config",
+                hint="This operation requires root privileges",
+            )
+            return False
+        except OSError as e:
+            error(f"I/O error creating schroot config: {e}")
             return False
 
     def _configure_fstab(self, dry_run: bool) -> bool:
@@ -382,8 +396,14 @@ preserve-environment=true
         except FileNotFoundError:
             error("sudo, cp or tee command not found")
             return False
-        except Exception as e:
-            error(str(e))
+        except PermissionError:
+            error(
+                "Permission denied configuring fstab",
+                hint="This operation requires root privileges",
+            )
+            return False
+        except OSError as e:
+            error(f"I/O error configuring fstab: {e}")
             return False
 
     def _configure_locales(self, chroot_name: str, dry_run: bool) -> bool:
@@ -439,7 +459,7 @@ preserve-environment=true
                 "[yellow]Warning:[/] Required commands not found for locale configuration"
             )
             return True  # Non-critical, continue
-        except Exception as e:
+        except (PermissionError, OSError, UnicodeDecodeError) as e:
             console.print(f"[yellow]Warning:[/] Locale configuration failed: {e}")
             return True  # Non-critical, continue
 
@@ -507,7 +527,7 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
                 "[yellow]Warning:[/] Required commands not found for repository configuration"
             )
             return True  # Non-critical, continue
-        except Exception as e:
+        except (PermissionError, OSError, UnicodeDecodeError) as e:
             warning(str(e))
             return True  # Non-critical
 
@@ -554,7 +574,7 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         except FileNotFoundError:
             warning("Required commands not found for i386 configuration")
             return True  # Non-critical, continue
-        except Exception as e:
+        except (PermissionError, OSError) as e:
             warning(str(e))
             return True  # Non-critical
 
@@ -622,8 +642,16 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         except FileNotFoundError:
             error("Required commands not found for Wine installation")
             return False
-        except Exception as e:
-            error(str(e))
+        except PermissionError:
+            error(
+                "Permission denied installing Wine", hint="This operation requires root privileges"
+            )
+            return False
+        except OSError as e:
+            error(
+                f"System error installing Wine: {e}",
+                hint="Check disk space and filesystem availability",
+            )
             return False
 
     def _verify_installation(self, chroot_name: str) -> bool:
@@ -672,6 +700,12 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         except FileNotFoundError:
             warning("Required commands not found for verification")
             return False
-        except Exception as e:
-            console.print(f"[yellow]Warning:[/] Verification failed: {e}")
+        except PermissionError:
+            warning("Permission denied during verification")
+            return False
+        except AttributeError:
+            warning("Unexpected output format from Wine version check")
+            return False
+        except OSError as e:
+            warning(f"System error during verification: {e}")
             return False

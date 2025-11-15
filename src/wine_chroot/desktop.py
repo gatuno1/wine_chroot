@@ -198,7 +198,8 @@ class DesktopManager:
                             app_name = line.split("=", 1)[1].strip()
                             wine_desktops.append((app_name, desktop_file))
                             break
-            except Exception:
+            except (OSError, UnicodeDecodeError):
+                # Skip files that can't be read or decoded
                 continue
 
         return sorted(wine_desktops)
@@ -221,8 +222,17 @@ class DesktopManager:
             else:
                 warning(f"Launcher not found: {desktop_file}")
                 return False
-        except Exception as e:
-            error(f"Failed to remove launcher: {e}")
+        except PermissionError:
+            error(
+                f"Permission denied removing launcher: {desktop_file}",
+                hint="Check file permissions",
+            )
+            return False
+        except IsADirectoryError:
+            error(f"Path is a directory, not a file: {desktop_file}")
+            return False
+        except OSError as e:
+            error(f"I/O error removing launcher: {e}")
             return False
 
     def list_wine_applications(self) -> list[dict]:
@@ -276,7 +286,8 @@ class DesktopManager:
                         if str(exe_file) in content or exe_file.name in content:
                             desktop_exists = True
                             break
-                    except Exception:
+                    except (OSError, UnicodeDecodeError):
+                        # Skip files that can't be read or decoded
                         continue
 
                 applications.append(

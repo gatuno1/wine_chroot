@@ -125,8 +125,8 @@ def extract_icon(
         for png in pngs:
             png.unlink(missing_ok=True)
         tmp_png_dir.rmdir()
-    except Exception:
-        pass  # Ignore cleanup errors
+    except OSError:
+        pass  # Ignore cleanup errors (file not found, permission denied, etc.)
 
     return final_icon
 

@@ -75,8 +75,26 @@ class Config:
                 f"[dim]Loaded configuration from {self.config_path}[/dim]",
                 highlight=False,
             )
-        except Exception as e:
-            error(f"Failed to load config: {e}")
+        except FileNotFoundError:
+            error(
+                f"Configuration file not found: {self.config_path}",
+                hint="Create it with: wine-chroot config --init",
+            )
+            self._set_defaults()
+        except PermissionError:
+            error(f"Permission denied reading: {self.config_path}", hint="Check file permissions")
+            self._set_defaults()
+        except IsADirectoryError:
+            error(f"Path is a directory, not a file: {self.config_path}")
+            self._set_defaults()
+        except tomllib.TOMLDecodeError as e:
+            error("Invalid TOML syntax in configuration file", hint=f"{e}")
+            self._set_defaults()
+        except (UnicodeDecodeError, ValueError) as e:
+            error(f"Failed to parse configuration file: {e}")
+            self._set_defaults()
+        except OSError as e:
+            error(f"I/O error reading configuration: {e}")
             self._set_defaults()
 
     def _set_defaults(self) -> None:
@@ -161,8 +179,23 @@ class Config:
             success(f"Configuration saved to {file(str(save_path))}")
             self.config_path = save_path
 
-        except Exception as e:
-            error(f"Failed to save config: {e}")
+        except PermissionError:
+            error(
+                f"Permission denied writing to: {save_path}",
+                hint="Check directory permissions or use a different path",
+            )
+        except IsADirectoryError:
+            error(f"Path is a directory, not a file: {save_path}")
+        except OSError as e:
+            error(
+                f"I/O error saving configuration: {e}",
+                hint="Check disk space and filesystem availability",
+            )
+        except (KeyError, TypeError, AttributeError) as e:
+            error(
+                f"Invalid configuration data structure: {e}",
+                hint="Configuration data may be corrupted",
+            )
 
     def _write_section(self, f, data: dict, parent_key: str = "") -> None:
         """Recursively write TOML sections.

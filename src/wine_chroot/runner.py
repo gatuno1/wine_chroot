@@ -181,9 +181,18 @@ class WineRunner:
                 if self.verbose:
                     success(f"Wine is installed: {version}")
                 return True
-        except Exception as e:
+        except FileNotFoundError as e:
             if self.verbose:
-                warning(f"Wine check failed: {e}")
+                warning(f"Wine command not found: {e}")
+        except PermissionError as e:
+            if self.verbose:
+                warning(f"Permission denied checking Wine: {e}")
+        except AttributeError as e:
+            if self.verbose:
+                warning(f"Unexpected Wine output format: {e}")
+        except OSError as e:
+            if self.verbose:
+                warning(f"System error checking Wine: {e}")
 
         return False
 
@@ -197,7 +206,7 @@ class WineRunner:
             result = self.run_wine_command(["--version"], capture_output=True)
             if result.returncode == 0 and result.stdout:
                 return result.stdout.strip()
-        except Exception:
+        except (FileNotFoundError, PermissionError, OSError, AttributeError):
             pass
 
         return None
