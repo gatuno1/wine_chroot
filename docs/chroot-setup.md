@@ -1,82 +1,73 @@
-# Notas de creación ambiente chroot
+# Configuración de un Entorno Chroot con Wine para ARM64
 
 Este documento describe cómo ejecutar aplicaciones Windows x86/x64 en un sistema Debian Trixie ARM64 (por ejemplo, Orange Pi 5 Plus) usando un entorno chroot amd64 con Wine x64/x86 completo.
 
-El objetivo es reemplazar la necesidad de emuladores parciales (como Box64 o CrossWine) mediante un entorno chroot real con soporte multi-arquitectura i386+amd64, ejecutado sobre QEMU user-static.
+El objetivo es reemplazar la necesidad de emuladores parciales (como Box64 o FEX-Emu) mediante un entorno chroot real con soporte multi-arquitectura i386+amd64, ejecutado sobre QEMU user-static.
 
-> **Nota**: Este documento describe el proceso manual. Para instalación automatizada, usa el comando `wine-chroot init`. Ver [README.md](../README.md) para más información.
+> **Nota**: Este documento describe el proceso manual. Para una instalación automatizada, puedes usar el comando `wine-chroot init`. Consulta el `README.md` para más detalles.
 
-## Arquitectura del sistema
+## Arquitectura del Sistema
 
-| Componente             | Rol                                                | Descripción                         |
-| ---------------------- | -------------------------------------------------- | ----------------------------------- |
-| **Host**               | Debian Trixie ARM64                                | Sistema base físico                 |
-| **Chroot**             | Debian Trixie AMD64                                | Entorno de usuario emulado          |
-| **Emulación**          | `qemu-user-static` + `binfmt-support`              | Traduce llamadas amd64→ARM64        |
-| **Gestor**             | `schroot`                                          | Control de sesiones y bind-mounts   |
-| **Software principal** | `wine`, `wine64`, `wine32`, `winetricks`, `q4wine` | Ejecución y gestión de apps Windows |
+| Componente             | Rol                                                | Descripción                                |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------ |
+| **Host**               | Debian Trixie ARM64                                | Sistema operativo base (físico)            |
+| **Chroot**             | Debian Trixie AMD64                                | Entorno de usuario emulado                 |
+| **Emulación**          | `qemu-user-static` + `binfmt-support`              | Traduce llamadas de amd64 a ARM64          |
+| **Gestor**             | `schroot`                                          | Controla sesiones y montajes (bind-mounts) |
+| **Software Principal** | `wine`, `wine64`, `wine32`, `winetricks`, `q4wine` | Ejecuta y gestiona apps de Windows         |
 
-## Resultado final
+## Guía de Instalación
 
-El host ARM64 puede ejecutar programas Windows x86/x64 mediante:
+### 1. Preparar el Entorno en el Host (ARM64)
 
-- Wine 64 + Wine 32 dentro de un chroot amd64 real.
-- QEMU user static como capa de emulación.
-- Integración X11 directa con el escritorio Cinnamon.
-- Accesos directos con íconos, gestionados por script Python.
-
-## Guía de instalación
-
-### 1. Preparar el entorno en host ARM64
+Instala las herramientas necesarias en tu sistema ARM64:
 
 ```bash
 sudo apt install debootstrap schroot qemu-user-static binfmt-support
 ```
 
-donde:
+- `debootstrap`: Crea un sistema Debian base.
+- `schroot`: Administra entornos chroot.
+- `qemu-user-static`: Permite ejecutar binarios de otra arquitectura.
+- `binfmt-support`: Integra `qemu-user-static` con el kernel para ejecución transparente.
 
-- `debootstrap`: Crea sistemas Debian mínimos.
-- `schroot`: Gestiona entornos chroot con bind-mounts.
-- `qemu-user-static`: Emula binarios amd64 en ARM64.
-- `binfmt-support`: Permite ejecutar binarios de otras arquitecturas automáticamente.
+### 2. Crear el sistema base (amd64)
 
-### 2. Crear el sistema base amd64
+Crea el directorio para el chroot y descarga el sistema base de Debian:
 
 ```bash
 sudo debootstrap --arch=amd64 trixie /srv/debian-amd64 http://deb.debian.org/debian
 ```
 
-donde `debian-amd64` es el nombre que elegí para el entorno chroot, y:
+donde `debian-amd64` es el nombre elegido para el entorno chroot, y:
 
-- `--arch=amd64`: Especifica la arquitectura del sistema chroot.
-- `trixie`: Versión de Debian a instalar.
-- `/srv/debian-amd64`: Ruta donde se instalará el sistema chroot.
-- `http://deb.debian.org/debian`: URL del repositorio Debian.
+- `--arch=amd64`: Especifica la arquitectura del chroot.
+- `trixie`: La versión de Debian a instalar.
+- `/srv/debian-amd64`: El directorio donde se alojará el chroot.
 
 ### 3. Configurar `schroot`
 
-Editar el archivo `/etc/schroot/chroot.d/debian-amd64.conf` para añadir la configuración del ambiente *chroot*:
+Crea el archivo de configuración para tu chroot en `/etc/schroot/chroot.d/debian-amd64.conf`:
 
 ```ini
 [debian-amd64]
 description=Debian Trixie amd64 chroot
 directory=/srv/debian-amd64
 type=directory
-users=gatuno
-root-users=gatuno
+users=<tu_usuario>
+root-users=<tu_usuario>
 personality=linux
 preserve-environment=true
 ```
 
-donde:
+- Reemplaza `<tu_usuario>` con tu nombre de usuario en el sistema host.
+- `directory` apunta a la ruta del sistema chroot creado, usando el nombre del chroot.
+- `personality=linux`: Asegura la compatibilidad del entorno.
+- `preserve-environment=true`: Propaga variables de entorno como `DISPLAY` y `HOME` del host al chroot.
 
-- `gatuno` es el nombre del usuario que tendrá acceso al chroot.
-- `directory` apunta a la ruta del sistema chroot creado.
-- `personality=linux` asegura que el entorno se comporte como un sistema Linux estándar (no linux64).
+### 4. Configurar `fstab` del Chroot
 
-### 4. Configurar `fstab` para el ambiente *chroot*
-
-Crear el archivo `/etc/schroot/default/fstab` con el siguiente contenido, para montar los sistemas de archivos necesarios dentro del ambiente *chroot*:
+Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/schroot/default/fstab`:
 
 ```fstab
 # fstab: static file system information for chroots.
@@ -90,56 +81,54 @@ Crear el archivo `/etc/schroot/default/fstab` con el siguiente contenido, para m
 /tmp/.X11-unix  /tmp/.X11-unix  none    rw,bind    0       0
 ```
 
-### 5. Entrar al entorno amd64
+### 5. Entrar y Configurar el Chroot
 
-Para acceder al ambiente *chroot*, ejecutar desde el host ARM64:
+Accede al chroot para configurarlo:
 
 ```bash
 sudo schroot -c debian-amd64
 ```
 
-### 6. Configurar locales y repositorios
+Una vez dentro, ejecuta los siguientes comandos:
 
-Ejecutar dentro del ambiente *chroot*:
+**a. Configurar locales y repositorios:**
 
 ```bash
 apt update
 apt install locales gnupg2 wget
-dpkg-reconfigure locales     # seleccionar es_CL.UTF-8 y adicionalmente en_US.UTF-8
+dpkg-reconfigure locales  # Selecciona tu localización (ej. es_CL.UTF-8, en_US.UTF-8)
 ```
 
-Asumiendo *Debian Trixie* como base para los repositorios, editar `/etc/apt/sources.list` y añadir:
+**b. Editar `/etc/apt/sources.list`:**
+Asegúrate de que tu `sources.list` contenga los repositorios `main`, `contrib`, `non-free` y `non-free-firmware` para Trixie.
 
-```config
-# Debian Trixie (testing / Debian 13) - repositorios principales
+```text
+# Main
 deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
-deb-src http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+# deb-src http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
 
 # Actualizaciones puntuales
 deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
-deb-src http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+# deb-src http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
 
 # Seguridad
 deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
-deb-src http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+# deb-src http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
 
-# Backports (útiles si algún paquete es muy nuevo, por ejemplo Wine o Mesa)
+# Backports
 deb http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware
-deb-src http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware
+# deb-src http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware
 ```
 
-### 7. Habilitar arquitectura i386
-
-Ejecutar dentro del ambiente *chroot*:
+**c. Habilitar arquitectura i386:**
+Esto es crucial para el soporte de aplicaciones de 32 bits.
 
 ```bash
 dpkg --add-architecture i386
 apt update
 ```
 
-### 8. Instalar Wine y herramientas relacionadas
-
-Ejecutar dentro del ambiente *chroot*:
+**d. Instalar Wine y herramientas:**
 
 ```bash
 apt install -y wine wine32 wine64 winetricks wine-binfmt fonts-wine q4wine --install-recommends
@@ -152,7 +141,8 @@ donde:
 - `fonts-wine`: Fuentes tipográficas comunes para aplicaciones Windows.
 - `q4wine`: Interfaz gráfica para gestionar configuraciones de Wine.
 
-**Opcional**: repositorio WineHQ más reciente:
+**e. (Opcional) Instalar desde el repositorio de WineHQ:**
+Para obtener una versión más reciente de Wine.
 
 ```bash
 wget -nc https://dl.winehq.org/wine-builds/winehq.key
@@ -162,79 +152,121 @@ apt update
 apt install --install-recommends winehq-stable
 ```
 
-### 9. Verificar instalación de Wine
-
-Todavía dentro del ambiente *chroot*, ejecutar:
+**f. Verificar instalación de Wine:**
 
 ```bash
+# Muestra la versión instalada de Wine
 wine --version
+# Configura Wine por primera vez
 winecfg
+# Prueba una aplicación simple
 wine notepad
 ```
 
-### 10. Salir del entorno *chroot*
-
-Para salir del ambiente *chroot*, ejecutar:
+**g. Salir del chroot:**
 
 ```bash
 exit
 ```
 
-### 11. Crear accesos directos para aplicaciones Windows
+## Modos de Instalación de Wine
 
-El script Python `make_wine_chroot_desktop.py` genera accesos directos `.desktop` para ejecutar aplicaciones Windows dentro del chroot y extrae íconos vía wrestool + icotool.
+### A. Instalación por Usuario (Recomendado)
 
-```python
-sudo schroot -c debian-amd64 -- wine "C:\Ruta\al\programa.exe"
-```
+Este modo aísla el entorno de Wine para cada usuario, lo que evita conflictos.
 
-Ejemplo de uso del script Python:
+**1. Crear el usuario dentro del chroot:**
+Asegúrate de que el nombre de usuario coincida con el del host.
 
 ```bash
-python3 make_wine_chroot_desktop.py \
-  --exe "/srv/debian-amd64/root/.wine/drive_c/Program Files/Notepad++/notepad++.exe" \
-  --name "Notepad++ (Wine chroot)" \
-  --icon \
+# Estando dentro del chroot
+adduser tu_usuario
+usermod -aG sudo tu_usuario  # Añadir al grupo sudo para permisos
 ```
 
-### 12. (Opcional) Script de Integración X11 con el host
+**2. Inicializar Wine como usuario:**
+Sal del chroot (`exit`) y vuelve a entrar como el usuario recién creado para generar su prefijo de Wine.
 
-Para facilitar la ejecución de aplicaciones Windows desde el host ARM64, se puede crear un script llamado `winegui.sh` con el siguiente contenido:
+```bash
+# Desde el host
+sudo schroot -c debian-amd64 --user=tu_usuario -- winecfg
+```
+
+Esto creará el prefijo en `/home/tu_usuario/.wine` dentro del chroot.
+
+### B. Instalación Global (Modo Root)
+
+Menos recomendado. Wine se ejecuta como `root` y el prefijo se almacena en `/root/.wine` dentro del chroot. Es más simple pero menos seguro, y propenso a conflictos.
+
+```bash
+# Desde el host
+sudo schroot -c debian-amd64 -- winecfg
+```
+
+## Integración con el Escritorio
+
+### 1. Configurar `sudoers` para Ejecución sin Contraseña
+
+Para que los accesos directos del menú no pidan contraseña al usar `schroot`, añade una regla a `sudoers`.
+
+**Ejecuta `sudo visudo` en el host** y agrega la siguiente línea, reemplazando `<tu_usuario>` con tu nombre de usuario:
+
+```text
+<tu_usuario> ALL=(ALL) NOPASSWD: /usr/bin/schroot
+```
+
+### 2. Crear Accesos Directos
+
+El script `wine-chroot` (o el script manual `make_wine_chroot_desktop.py`) puede generar archivos `.desktop` para tus aplicaciones. Estos archivos ejecutan la aplicación de Windows a través del chroot.
+
+**Ejemplo de uso del script:**
+
+```bash
+wine-chroot desktop \
+  --exe "/srv/debian-amd64/home/<tu_usuario>/.wine/drive_c/Program Files/MiApp/app.exe" \
+  --name "Mi Aplicación (Wine)"
+```
+
+Esto creará un lanzador en el menú de aplicaciones de tu escritorio, donde `<tu_usuario>` es tu nombre de usuario en el host.
+
+### 3. Script Opcional de Ejecución Manual (`winegui`)
+
+Si prefieres lanzar aplicaciones desde la terminal, puedes crear un script auxiliar.
+
+Crea el archivo `~/winegui.sh`:
 
 ```bash
 #!/usr/bin/env bash
-xhost +local: >/dev/null 2>&1 || true
-sudo schroot -c debian-amd64 -- env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY wine "$@"
+# Script para ejecutar comandos de Wine dentro del chroot como tu usuario
+CHROOT_NAME="debian-amd64"
+CHROOT_USER="$(whoami)"
+
+# Ejecuta el comando en el chroot
+sudo schroot -c "$CHROOT_NAME" --user="$CHROOT_USER" -- wine "$@"
 ```
 
-donde:
-
-- `DISPLAY` y `XAUTHORITY` se utilizan para permitir que las aplicaciones gráficas de Wine se muestren en el entorno gráfico del host ARM64.
-- `"$@"` se utiliza para pasar todos los argumentos del script a la aplicación Wine.
-
-Hacer el script ejecutable:
+Dale permisos y muévelo a una ruta accesible:
 
 ```bash
-chmod +x winegui.sh
+chmod +x ~/winegui.sh
 sudo mv ~/winegui.sh /usr/local/bin/winegui
 ```
 
-Ejemplo de uso desde el host ARM64:
+**Ejemplo de uso:**
 
 ```bash
 winegui "C:\Program Files\Notepad++\notepad++.exe"
 ```
 
-## Resumen
+## Resumen del Resultado
 
-Construir un entorno `chroot` Debian Trixie amd64 dentro de un host ARM64 usando `debootstrap`, `schroot` y `qemu-user-static`.
-Dentro del chroot se instala Wine x64+x86, habilitando i386 y amd64.
-Se montan `/home`, `/dev`, `/proc`, `/tmp` y `/tmp/.X11-unix` para compatibilidad gráfica.
-Los programas se ejecutan mediante `sudo schroot -c debian-amd64 -- wine "C:\..."`.
-Los accesos se generan automáticamente con `make_wine_chroot_desktop.py`, que extrae íconos del .exe.
-Resultado: ejecución nativa de software Windows x86/x64 en ARM64 sin depender de Box64 ni CrossWine.
+- Un entorno `chroot` amd64 funcional en un host ARM64.
+- Wine con soporte para 32 y 64 bits instalado dentro del chroot.
+- Aislamiento de prefijos de Wine por usuario para mayor estabilidad.
+- Integración transparente con el escritorio mediante accesos directos y ejecución sin contraseña.
+- Capacidad de ejecutar software de Windows x86/x64 de forma nativa en ARM64 sin emuladores de sistema completo.
 
-## Referencias externas
+## Referencias Externas
 
 - [Guía oficial de Wine para Debian/Ubuntu](https://gitlab.winehq.org/wine/wine/-/wikis/Debian-Ubuntu#preparation)
 - [Wiki de Debian sobre Wine](https://wiki.debian.org/Wine)
