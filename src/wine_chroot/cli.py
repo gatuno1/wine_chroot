@@ -304,6 +304,46 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="<command>",
     )
 
+    # init command
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Initialize a new chroot environment",
+        description=(
+            "[i]command:[/i] [argparse.args]init[/] - "
+            "Create and configure a new Debian amd64 chroot with Wine installed. "
+            "This automates debootstrap, schroot configuration, and Wine setup."
+        ),
+        formatter_class=RichHelpFormatter,
+    )
+    init_parser.add_argument(
+        "-n",
+        "--name",
+        help="Chroot name (default: from config)",
+    )
+    init_parser.add_argument(
+        "-p",
+        "--path",
+        type=Path,
+        help=(
+            "Chroot installation path (default: from config)"
+        ),
+    )
+    init_parser.add_argument(
+        "--debian-version",
+        default="trixie",
+        help="Debian version to install (default: [argparse.default]trixie[/])",
+    )
+    init_parser.add_argument(
+        "--skip-wine",
+        action="store_true",
+        help="Don't install Wine automatically",
+    )
+    init_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
+
     # run command
     run_parser = subparsers.add_parser(
         "run",
@@ -420,46 +460,6 @@ def build_parser() -> argparse.ArgumentParser:
             "Output path for --init "
             "(default: [argparse.default]'~/.config/wine-chroot.toml'[/])"
         ),
-    )
-
-    # init command
-    init_parser = subparsers.add_parser(
-        "init",
-        help="Initialize a new chroot environment",
-        description=(
-            "[i]command:[/i] [argparse.args]init[/] - "
-            "Create and configure a new Debian amd64 chroot with Wine installed. "
-            "This automates debootstrap, schroot configuration, and Wine setup."
-        ),
-        formatter_class=RichHelpFormatter,
-    )
-    init_parser.add_argument(
-        "-n",
-        "--name",
-        help="Chroot name (default: from config)",
-    )
-    init_parser.add_argument(
-        "-p",
-        "--path",
-        type=Path,
-        help=(
-            "Chroot installation path (default: from config)"
-        ),
-    )
-    init_parser.add_argument(
-        "--debian-version",
-        default="trixie",
-        help="Debian version to install (default: [argparse.default]trixie[/])",
-    )
-    init_parser.add_argument(
-        "--skip-wine",
-        action="store_true",
-        help="Don't install Wine automatically",
-    )
-    init_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be done without making changes",
     )
 
     return parser
