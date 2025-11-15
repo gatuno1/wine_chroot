@@ -310,13 +310,19 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument(
         "-n",
         "--name",
-        help="Chroot name (default: from config)",
+        help=(
+            f"Chroot name (default: [argparse.default]{Config.DEFAULT_CHROOT_NAME}[/] "
+            "or from config)"
+        ),
     )
     init_parser.add_argument(
         "-p",
         "--path",
         type=Path,
-        help=("Chroot installation path (default: from config)"),
+        help=(
+            f"Chroot installation path (default: [argparse.default]{Config.DEFAULT_CHROOT_PATH}[/] "
+            "or from config)"
+        ),
     )
     init_parser.add_argument(
         "--debian-version",

@@ -101,7 +101,12 @@ class ChrootManager:
         if not chroot_name:
             chroot_name = self.config.chroot_name
         if not chroot_path:
-            chroot_path = self.config.chroot_path
+            # If a custom name was provided, derive path from it
+            # Otherwise use the config path
+            if chroot_name and chroot_name != self.config.chroot_name:
+                chroot_path = Path("/srv") / chroot_name
+            else:
+                chroot_path = self.config.chroot_path
 
         console.print("\n[bold cyan]Wine Chroot Initialization[/]")
         console.print(f"Chroot name: [yellow]{chroot_name}[/]")

@@ -24,6 +24,10 @@ else:
 class Config:
     """Configuration manager for wine-chroot."""
 
+    # Default chroot configuration
+    DEFAULT_CHROOT_NAME = "debian-amd64"
+    DEFAULT_CHROOT_PATH = Path("/srv") / DEFAULT_CHROOT_NAME
+
     DEFAULT_CONFIG_PATHS = [
         Path.home() / ".config" / "wine-chroot.toml",
         Path.home() / ".wine-chroot.toml",
@@ -101,8 +105,8 @@ class Config:
         """Set default configuration values."""
         self.data = {
             "chroot": {
-                "name": "debian-amd64",
-                "path": "/srv/debian-amd64",
+                "name": self.DEFAULT_CHROOT_NAME,
+                "path": str(self.DEFAULT_CHROOT_PATH),
                 "architecture": "amd64",
                 "debian_version": "trixie",
             },
@@ -245,12 +249,12 @@ class Config:
     @property
     def chroot_name(self) -> str:
         """Get chroot name."""
-        return self.get("chroot.name", "debian-amd64")
+        return self.get("chroot.name", self.DEFAULT_CHROOT_NAME)
 
     @property
     def chroot_path(self) -> Path:
         """Get chroot path as Path object."""
-        return Path(self.get("chroot.path", "/srv/debian-amd64"))
+        return Path(self.get("chroot.path", str(self.DEFAULT_CHROOT_PATH)))
 
     @property
     def wine_prefix(self) -> str:
@@ -289,12 +293,12 @@ def create_example_config(output_path: Path) -> None:
     Args:
         output_path: Path where to create the example config
     """
-    example = """# Wine Chroot Configuration
+    example = f"""# Wine Chroot Configuration
 # This file configures the wine-chroot tool
 
 [chroot]
-name = "debian-amd64"
-path = "/srv/debian-amd64"
+name = "{Config.DEFAULT_CHROOT_NAME}"
+path = "{Config.DEFAULT_CHROOT_PATH}"
 architecture = "amd64"
 debian_version = "trixie"
 
