@@ -89,8 +89,12 @@ class DesktopManager:
 
         # Build Exec command
         privilege_cmd = "pkexec" if self.config.use_pkexec else "sudo"
+        env_cmd = (
+            'env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"'
+        )
         exec_line = (
-            f'Exec={privilege_cmd} schroot -c {self.config.chroot_name} -- wine "{win_exe_path}"'
+            f"Exec={privilege_cmd} {env_cmd} schroot -c {self.config.chroot_name} -- "
+            f'wine "{win_exe_path}"'
         )
         lines.append(exec_line)
 
@@ -99,7 +103,11 @@ class DesktopManager:
             [
                 "Type=Application",
                 f"Categories={
-                    ';'.join(self.config.get('desktop.categories', ['Wine', 'WindowsApps']))
+                    ';'.join(
+                        self.config.get(
+                            'desktop.categories', ['Wine', 'TextEditor', 'WindowsApps', 'X-Wine']
+                        )
+                    )
                 };",
                 "StartupNotify=true",
                 "Terminal=false",
@@ -169,7 +177,8 @@ class DesktopManager:
         except subprocess.CalledProcessError as e:
             if self.verbose:
                 console.print(
-                    f"[dim]update-desktop-database failed: {e.stderr if e.stderr else 'unknown error'}[/]",
+                    "[dim]update-desktop-database failed: "
+                    f"{e.stderr if e.stderr else 'unknown error'}[/]",
                 )
         except FileNotFoundError:
             if self.verbose:

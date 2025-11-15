@@ -268,7 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         prog="wine-chroot",
-        description="Run Windows applications on ARM64 Linux using Wine in a chroot",
+        description=("Manage Windows applications on ARM64 Linux using Wine in a chroot"),
+        epilog=(
+            "Use '[argparse.prog]wine-chroot[/] [argparse.args]<command> --help'[/] for more "
+            "information on a specific command."
+        ),
         formatter_class=RichHelpFormatter,
     )
 
@@ -276,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-c",
         "--config",
         type=Path,
-        help="Path to wine-chroot.toml configuration file",
+        help="Path to '[argparse.default]wine-chroot.toml[/]' configuration file",
     )
 
     parser.add_argument(
@@ -287,17 +291,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "-V",
         "--version",
         action="store_true",
         help="Show version information",
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    subparsers = parser.add_subparsers(
+        dest="command",
+        title="commands",
+        description="Available commands",
+        metavar="<command>",
+    )
 
     # run command
     run_parser = subparsers.add_parser(
         "run",
         help="Run a Windows application",
+        description=(
+            "[i]command:[/i] [argparse.args]run[/] - "
+            "Execute a Windows application inside the chroot using Wine"
+        ),
         formatter_class=RichHelpFormatter,
     )
     run_parser.add_argument(
@@ -310,11 +324,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Arguments to pass to the application",
     )
     run_parser.add_argument(
+        "-w",
         "--wait",
         action="store_true",
         help="Wait for application to exit",
     )
     run_parser.add_argument(
+        "-t",
         "--terminal",
         action="store_true",
         help="Show terminal output",
@@ -324,6 +340,11 @@ def build_parser() -> argparse.ArgumentParser:
     desktop_parser = subparsers.add_parser(
         "desktop",
         help="Create a .desktop launcher",
+        description=(
+            "[i]command:[/i] [argparse.args]desktop[/] - "
+            "Create a .desktop launcher file for easy application menu access. "
+            "Optionally extracts icons from Windows executables."
+        ),
         formatter_class=RichHelpFormatter,
     )
     desktop_parser.add_argument(
@@ -347,34 +368,47 @@ def build_parser() -> argparse.ArgumentParser:
     desktop_parser.add_argument(
         "-d",
         "--desktop",
-        help="Custom .desktop filename",
+        help="Custom [green].desktop[/] launcher filename",
     )
 
     # list command
     list_parser = subparsers.add_parser(
         "list",
         help="List applications or launchers",
+        description=(
+            "[i]command:[/i] [argparse.args]list[/] - "
+            "List installed Windows applications in the chroot or existing "
+            "[green].desktop[/] launchers"
+        ),
         formatter_class=RichHelpFormatter,
     )
     list_parser.add_argument(
+        "-l",
         "--launchers",
         action="store_true",
-        help="List only .desktop launchers",
+        help="List only [green].desktop[/] launchers",
     )
 
     # config command
     config_parser = subparsers.add_parser(
         "config",
         help="Manage configuration",
+        description=(
+            "[i]command:[/i] [argparse.args]config[/] - "
+            "Display current configuration settings or create an example "
+            "[argparse.default]'wine-chroot.toml'[/] configuration file"
+        ),
         formatter_class=RichHelpFormatter,
     )
     config_group = config_parser.add_mutually_exclusive_group(required=True)
     config_group.add_argument(
+        "-s",
         "--show",
         action="store_true",
         help="Show current configuration",
     )
     config_group.add_argument(
+        "-i",
         "--init",
         action="store_true",
         help="Create example configuration file",
@@ -382,28 +416,40 @@ def build_parser() -> argparse.ArgumentParser:
     config_parser.add_argument(
         "-o",
         "--output",
-        help="Output path for --init (default: ~/.config/wine-chroot.toml)",
+        help=(
+            "Output path for --init "
+            "(default: [argparse.default]'~/.config/wine-chroot.toml'[/])"
+        ),
     )
 
     # init command
     init_parser = subparsers.add_parser(
         "init",
         help="Initialize a new chroot environment",
+        description=(
+            "[i]command:[/i] [argparse.args]init[/] - "
+            "Create and configure a new Debian amd64 chroot with Wine installed. "
+            "This automates debootstrap, schroot configuration, and Wine setup."
+        ),
         formatter_class=RichHelpFormatter,
     )
     init_parser.add_argument(
+        "-n",
         "--name",
-        help="Chroot name (default: from config or 'debian-amd64')",
+        help="Chroot name (default: from config)",
     )
     init_parser.add_argument(
+        "-p",
         "--path",
         type=Path,
-        help="Chroot installation path (default: from config or '/srv/debian-amd64')",
+        help=(
+            "Chroot installation path (default: from config)"
+        ),
     )
     init_parser.add_argument(
         "--debian-version",
         default="trixie",
-        help="Debian version to install (default: trixie)",
+        help="Debian version to install (default: [argparse.default]trixie[/])",
     )
     init_parser.add_argument(
         "--skip-wine",
