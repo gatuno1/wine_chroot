@@ -112,14 +112,25 @@ sudo apt install schroot debootstrap qemu-user-static binfmt-support icoutils
 4 **Install wine-chroot:**
 
 ```bash
-# Install the package
-uv pip install -e .
+# Install as a global tool (recommended - makes 'wine-chroot' command available)
+uv tool install -e .
 
 # Verify installation
 wine-chroot --version
 ```
 
-> **For developers**: See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed development setup, including why to use editable mode (`-e`) and alternative installation methods.
+**Alternative installation methods:**
+
+```bash
+# Install in virtual environment (requires 'uv run' prefix)
+uv pip install -e .
+uv run wine-chroot --version
+
+# Install without editable mode (for production use)
+uv tool install .
+```
+
+> **For developers**: See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed development setup and testing workflow.
 
 ### Setting Up the Chroot
 

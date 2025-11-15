@@ -8,7 +8,7 @@ Wine Chroot is an automated solution for running Windows amd64 applications on A
 
 ### System Components
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Host System (Debian ARM64)                                 │
 │                                                              │
@@ -47,7 +47,7 @@ Wine Chroot is an automated solution for running Windows amd64 applications on A
 
 ## Project Structure
 
-```
+```asciiart
 wine_chroot/
 ├── src/
 │   └── wine_chroot/
@@ -100,6 +100,7 @@ wine-chroot run /srv/debian-amd64/root/.wine/drive_c/Program Files/App/app.exe
 ```
 
 Features:
+
 - Automatic path conversion (Linux → Windows format)
 - X11 forwarding (DISPLAY, XAUTHORITY)
 - Privilege management (pkexec/sudo)
@@ -117,6 +118,7 @@ wine-chroot desktop \
 ```
 
 Features:
+
 - Automatic icon extraction using wrestool + icotool
 - Proper StartupWMClass for window grouping
 - Categories: Wine, WindowsApps
@@ -131,6 +133,7 @@ wine-chroot list
 ```
 
 Scans common Wine directories and displays:
+
 - Application names
 - Executable paths
 - Whether a .desktop launcher exists
@@ -183,14 +186,14 @@ Commands:
   init       Initialize a new chroot environment
   run        Run a Windows application
   desktop    Create a .desktop launcher
-  list       List installed Windows applications
-  config     Show or edit configuration
-  version    Show version information
+  list       List applications or launchers
+  config     Manage configuration
 
 Options:
-  -c, --config PATH   Path to wine-chroot.toml (default: ~/.config/wine-chroot.toml)
+  -c, --config PATH   Path to wine-chroot.toml configuration file
   -v, --verbose       Enable verbose output
-  --help              Show this message and exit
+  -V, --version       Show version information
+  -h, --help          Show this message and exit
 ```
 
 ### Subcommands
@@ -203,11 +206,12 @@ wine-chroot init [OPTIONS]
 Initialize a new chroot environment
 
 Options:
-  --name TEXT           Chroot name (default: debian-amd64)
-  --path PATH           Chroot installation path (default: /srv/debian-amd64)
-  --debian-version TEXT Debian version (default: trixie)
-  --skip-wine           Don't install Wine automatically
-  --help                Show this message and exit
+  -n, --name TEXT           Chroot name (default: from config or 'debian-amd64')
+  -p, --path PATH           Chroot installation path (default: from config or '/srv/debian-amd64')
+  --debian-version TEXT     Debian version (default: trixie)
+  --skip-wine               Don't install Wine automatically
+  --dry-run                 Show what would be done without making changes
+  -h, --help                Show this message and exit
 ```
 
 #### `wine-chroot run`
@@ -222,9 +226,9 @@ Arguments:
   ARGS  Arguments to pass to the application
 
 Options:
-  --wait                Wait for application to exit
-  --terminal            Show terminal output
-  --help                Show this message and exit
+  -w, --wait            Wait for application to exit
+  -t, --terminal        Show terminal output
+  -h, --help            Show this message and exit
 ```
 
 #### `wine-chroot desktop`
@@ -236,10 +240,10 @@ Create a .desktop launcher
 
 Options:
   -e, --exe PATH        Path to .exe file (required)
-  -n, --name TEXT       Application name (required)
+  -n, --name TEXT       Application name for the menu (required)
   -i, --icon            Extract icon from .exe
   -d, --desktop TEXT    Custom .desktop filename
-  --help                Show this message and exit
+  -h, --help            Show this message and exit
 ```
 
 #### `wine-chroot list`
@@ -247,12 +251,27 @@ Options:
 ```bash
 wine-chroot list [OPTIONS]
 
-List installed Windows applications
+List applications or launchers
 
 Options:
-  --scan                Force rescan of chroot
-  --with-desktop-only   Show only apps with .desktop files
-  --help                Show this message and exit
+  -l, --launchers       List only .desktop launchers (without this flag, lists all Windows applications in chroot)
+  -h, --help            Show this message and exit
+```
+
+#### `wine-chroot config`
+
+```bash
+wine-chroot config [OPTIONS]
+
+Manage configuration
+
+Options:
+  -s, --show            Show current configuration
+  -i, --init            Create example configuration file
+  -o, --output PATH     Output path for --init (default: ~/.config/wine-chroot.toml)
+  -h, --help            Show this message and exit
+
+Note: -s/--show and -i/--init are mutually exclusive (one is required)
 ```
 
 ## Technology Stack
@@ -269,6 +288,7 @@ Options:
 ### System Dependencies
 
 **Host (ARM64):**
+
 - debootstrap: Create Debian base systems
 - schroot: Manage chroot sessions
 - qemu-user-static: x86-64 emulation on ARM64
@@ -276,6 +296,7 @@ Options:
 - icoutils: Icon extraction (wrestool, icotool)
 
 **Chroot (AMD64):**
+
 - wine, wine32, wine64: Windows application layer
 - winetricks: Wine configuration helper
 - fonts-wine: Windows fonts
@@ -329,6 +350,7 @@ def convert_path_to_windows(linux_path: Path) -> str:
 ### Error Handling Philosophy
 
 - **User errors**: Clear, actionable messages without stack traces
+
   ```python
   console.print("[bold red]Error:[/] The .exe file does not exist at '{path}'")
   console.print("[yellow]Hint:[/] Make sure the path is from the host perspective")
@@ -353,11 +375,13 @@ The tool uses `sudo` for schroot access by default instead of `pkexec` for the f
 4. **Historical evidence**: The original bash implementation used a wrapper script that relied on sudo-like behavior, which worked reliably.
 
 **When to use pkexec:**
+
 - Interactive CLI usage where graphical authentication dialogs are preferred
 - Systems with strict security policies against sudoers rules
 - User explicitly configures `use_pkexec = true` in wine-chroot.toml
 
 **Implementation:**
+
 ```python
 # Default configuration (config.py)
 "execution": {
@@ -393,33 +417,39 @@ The tool uses `sudo` for schroot access by default instead of `pkexec` for the f
 ## Implementation Phases
 
 ### Phase 1: Core Restructuring ✓
+
 - ✅ Create new src/wine_chroot/ package structure
 - ✅ Move and refactor existing code
 - ✅ Update pyproject.toml with new entry points
 - ✅ Create CLAUDE.md (this file)
 
 ### Phase 2: Configuration System ✓
+
 - ✅ Implement config.py with TOML support
 - ✅ Create wine-chroot.toml.example
 - ✅ Add config validation and property accessors
 
 ### Phase 3: CLI Commands ✓
+
 - ✅ Implement cli.py with argparse + rich-argparse
 - ✅ Create subcommands: run, desktop, list, config, init
 - ✅ Add --verbose and --config flags
 
 ### Phase 4: Chroot Management ✓
+
 - ✅ Implement chroot.py with init functionality
 - ✅ Automate debootstrap, schroot config, Wine installation
 - ✅ Add safety checks and dry-run mode
 - ✅ Progress indicators for long operations
 
 ### Phase 5: Desktop Integration ✓
+
 - ✅ Implement desktop.py with icon extraction
 - ✅ Implement list command with app discovery
 - ✅ Desktop file generation with proper metadata
 
 ### Phase 6: Documentation & Testing ✓
+
 - ✅ Update README.md with new CLI usage
 - ✅ Create docs/chroot-setup.md with detailed guide
 - ✅ Create docs/DEVELOPMENT.md for contributors
