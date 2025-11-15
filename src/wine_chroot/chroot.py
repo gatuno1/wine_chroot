@@ -9,13 +9,11 @@ import subprocess
 import time
 from pathlib import Path
 
-from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import Config
+from .console_styles import console, error, step, success, warning
 from .utils import check_command_exists
-
-console = Console()
 
 
 class ChrootManager:
@@ -116,27 +114,28 @@ class ChrootManager:
             console.print()
 
         # Step 1: Check prerequisites
-        console.print("[cyan]1.[/] Checking prerequisites...")
+        step(1, "Checking prerequisites...")
         all_ok, missing = self.check_prerequisites()
         if not all_ok:
-            console.print(f"[bold red]Error:[/] Missing required tools: {', '.join(missing)}")
+            error(f"Missing required tools: {', '.join(missing)}")
             console.print("\nInstall with:")
             console.print("  sudo apt install debootstrap schroot qemu-user-static binfmt-support")
             return False
 
         if not self.check_root_access():
-            console.print("[yellow]Warning:[/] Cannot verify sudo access without password")
+            warning("Cannot verify sudo access without password")
             console.print("           You may be prompted for your password during installation")
 
-        console.print("[green]✓[/] All prerequisites available")
+        success("All prerequisites available")
 
         # Step 2: Check if chroot already exists
-        console.print("\n[cyan]2.[/] Checking if chroot already exists...")
+        console.print()
+        step(2, "Checking if chroot already exists...")
         if chroot_path.exists():
-            console.print(f"[bold red]Error:[/] Path already exists: {chroot_path}")
+            error(f"Path already exists: {chroot_path}")
             console.print("         Please remove it first or choose a different path")
             return False
-        console.print("[green]✓[/] Path is available")
+        success("Path is available")
 
         # Step 3: Create base system with debootstrap
         if not self._run_debootstrap(chroot_path, debian_version, dry_run):
@@ -172,7 +171,8 @@ class ChrootManager:
         # Step 10: Verify installation
         if not dry_run:
             if not self._verify_installation(chroot_name):
-                console.print("\n[yellow]Warning:[/] Verification failed, but chroot was created")
+                console.print()
+                warning("Verification failed, but chroot was created")
                 console.print("           You may need to configure it manually")
 
         # Success!
@@ -205,7 +205,8 @@ class ChrootManager:
         Returns:
             True if successful
         """
-        console.print(f"\n[cyan]3.[/] Creating Debian {debian_version} amd64 base system...")
+        console.print()
+        step(3, f"Creating Debian {debian_version} amd64 base system...")
         console.print("    This may take several minutes...")
 
         if dry_run:
@@ -242,23 +243,25 @@ class ChrootManager:
 
                 progress.update(task, completed=True)
 
-            console.print("[green]✓[/] Base system created")
+            success("Base system created")
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[bold red]Error:[/] debootstrap failed")
+            error("debootstrap failed")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return False
         except subprocess.TimeoutExpired:
-            console.print("[bold red]Error:[/] debootstrap timed out after 10 minutes")
+            error("debootstrap timed out after 10 minutes")
             return False
         except FileNotFoundError:
-            console.print("[bold red]Error:[/] debootstrap command not found")
-            console.print("           Install with: sudo apt install debootstrap")
+            error(
+                "debootstrap command not found",
+                hint="Install with: sudo apt install debootstrap"
+            )
             return False
         except Exception as e:
-            console.print(f"[bold red]Error:[/] {e}")
+            error(str(e))
             return False
 
     def _configure_schroot(
@@ -277,7 +280,8 @@ class ChrootManager:
         Returns:
             True if successful
         """
-        console.print("\n[cyan]4.[/] Configuring schroot...")
+        console.print()
+        step(4, "Configuring schroot...")
 
         config_content = f"""[{chroot_name}]
 description=Debian amd64 chroot for Wine
@@ -311,15 +315,15 @@ preserve-environment=true
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[bold red]Error:[/] Failed to create schroot config")
+            error("Failed to create schroot config")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return False
         except FileNotFoundError:
-            console.print("[bold red]Error:[/] sudo or tee command not found")
+            error("sudo or tee command not found")
             return False
         except Exception as e:
-            console.print(f"[bold red]Error:[/] {e}")
+            error(str(e))
             return False
 
     def _configure_fstab(self, dry_run: bool) -> bool:
@@ -331,7 +335,8 @@ preserve-environment=true
         Returns:
             True if successful
         """
-        console.print("\n[cyan]5.[/] Configuring bind mounts...")
+        console.print()
+        step(5, "Configuring bind mounts...")
 
         fstab_content = """# fstab: static file system information for chroots.
 # <file system> <mount point>   <type>  <options>  <dump>  <pass>
@@ -366,19 +371,19 @@ preserve-environment=true
                 check=True,
             )
 
-            console.print("[green]✓[/] Bind mounts configured")
+            success("Bind mounts configured")
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[bold red]Error:[/] Failed to configure fstab")
+            error("Failed to configure fstab")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return False
         except FileNotFoundError:
-            console.print("[bold red]Error:[/] sudo, cp or tee command not found")
+            error("sudo, cp or tee command not found")
             return False
         except Exception as e:
-            console.print(f"[bold red]Error:[/] {e}")
+            error(str(e))
             return False
 
     def _configure_locales(self, chroot_name: str, dry_run: bool) -> bool:
@@ -391,7 +396,8 @@ preserve-environment=true
         Returns:
             True if successful
         """
-        console.print("\n[cyan]6.[/] Configuring locales...")
+        console.print()
+        step(6, "Configuring locales...")
 
         if dry_run:
             console.print("[dim]Would install locales and configure en_US.UTF-8[/]")
@@ -420,11 +426,11 @@ preserve-environment=true
                 check=True,
             )
 
-            console.print("[green]✓[/] Locales configured")
+            success("Locales configured")
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[yellow]Warning:[/] Locale configuration failed")
+            warning("Locale configuration failed")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return True  # Non-critical, continue
@@ -453,7 +459,8 @@ preserve-environment=true
         Returns:
             True if successful
         """
-        console.print("\n[cyan]7.[/] Configuring Debian repositories...")
+        console.print()
+        step(7, "Configuring Debian repositories...")
 
         sources_list = f"""# Debian {debian_version} repositories
 deb http://deb.debian.org/debian {debian_version} main contrib non-free non-free-firmware
@@ -487,11 +494,11 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
                 check=True,
             )
 
-            console.print("[green]✓[/] Repositories configured")
+            success("Repositories configured")
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[yellow]Warning:[/] Failed to configure repositories")
+            warning("Failed to configure repositories")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return True  # Non-critical, continue
@@ -501,7 +508,7 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             )
             return True  # Non-critical, continue
         except Exception as e:
-            console.print(f"[yellow]Warning:[/] {e}")
+            warning(str(e))
             return True  # Non-critical
 
     def _enable_i386(self, chroot_name: str, dry_run: bool) -> bool:
@@ -514,7 +521,8 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         Returns:
             True if successful
         """
-        console.print("\n[cyan]8.[/] Enabling i386 architecture...")
+        console.print()
+        step(8, "Enabling i386 architecture...")
 
         if dry_run:
             console.print("[dim]Would run: dpkg --add-architecture i386[/]")
@@ -535,19 +543,19 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
                 check=True,
             )
 
-            console.print("[green]✓[/] i386 architecture enabled")
+            success("i386 architecture enabled")
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[yellow]Warning:[/] Failed to add i386 architecture")
+            warning("Failed to add i386 architecture")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return True  # Non-critical, continue
         except FileNotFoundError:
-            console.print("[yellow]Warning:[/] Required commands not found for i386 configuration")
+            warning("Required commands not found for i386 configuration")
             return True  # Non-critical, continue
         except Exception as e:
-            console.print(f"[yellow]Warning:[/] {e}")
+            warning(str(e))
             return True  # Non-critical
 
     def _install_wine(self, chroot_name: str, dry_run: bool) -> bool:
@@ -560,7 +568,8 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         Returns:
             True if successful
         """
-        console.print("\n[cyan]9.[/] Installing Wine (this may take a while)...")
+        console.print()
+        step(9, "Installing Wine (this may take a while)...")
 
         if dry_run:
             console.print("[dim]Would install: wine wine32 wine64 wine-binfmt fonts-wine[/]")
@@ -599,22 +608,22 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
 
                 progress.update(task, completed=True)
 
-            console.print("[green]✓[/] Wine installed successfully")
+            success("Wine installed successfully")
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[bold red]Error:[/] Wine installation failed")
+            error("Wine installation failed")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return False
         except subprocess.TimeoutExpired:
-            console.print("[bold red]Error:[/] Wine installation timed out")
+            error("Wine installation timed out")
             return False
         except FileNotFoundError:
-            console.print("[bold red]Error:[/] Required commands not found for Wine installation")
+            error("Required commands not found for Wine installation")
             return False
         except Exception as e:
-            console.print(f"[bold red]Error:[/] {e}")
+            error(str(e))
             return False
 
     def _verify_installation(self, chroot_name: str) -> bool:
@@ -626,7 +635,8 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
         Returns:
             True if verification passed
         """
-        console.print("\n[cyan]10.[/] Verifying installation...")
+        console.print()
+        step(10, "Verifying installation...")
 
         try:
             # Check if we can enter the chroot
@@ -652,15 +662,15 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             return True
 
         except subprocess.CalledProcessError as e:
-            console.print("[yellow]Warning:[/] Verification failed - command returned error")
+            warning("Verification failed - command returned error")
             if self.verbose and e.stderr:
                 console.print(f"[dim]{e.stderr}[/]")
             return False
         except subprocess.TimeoutExpired:
-            console.print("[yellow]Warning:[/] Verification timed out")
+            warning("Verification timed out")
             return False
         except FileNotFoundError:
-            console.print("[yellow]Warning:[/] Required commands not found for verification")
+            warning("Required commands not found for verification")
             return False
         except Exception as e:
             console.print(f"[yellow]Warning:[/] Verification failed: {e}")
