@@ -10,9 +10,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
+from .console_styles import command, console, error, warning
 
 
 def linux_path_to_windows(path: str | Path) -> str:
@@ -72,7 +70,7 @@ def windows_path_to_linux(win_path: str, chroot_path: Path, wine_prefix: str = "
     return chroot_path / "root" / wine_prefix / "drive_c" / linux_part
 
 
-def check_command_exists(command: str) -> bool:
+def check_command_exists(command_name: str) -> bool:
     """Check if a command exists in PATH.
 
     Args:
@@ -81,7 +79,7 @@ def check_command_exists(command: str) -> bool:
     Returns:
         True if command exists, False otherwise
     """
-    return shutil.which(command) is not None
+    return shutil.which(command_name) is not None
 
 
 def check_system_dependencies(verbose: bool = False) -> tuple[bool, list[str]]:
@@ -109,15 +107,15 @@ def check_system_dependencies(verbose: bool = False) -> tuple[bool, list[str]]:
                     check_command_exists("qemu-user-static")):
                 missing.append(cmd)
                 if verbose:
-                    console.print(f"[yellow]✗[/] {cmd}: {description}")
+                    console.print(f"[yellow]✗[/yellow] {cmd}: {description}")
             elif verbose:
-                console.print(f"[green]✓[/] {cmd}: {description}")
+                console.print(f"[green]✓[/green] {cmd}: {description}")
         elif not check_command_exists(cmd):
             missing.append(cmd)
             if verbose:
-                console.print(f"[yellow]✗[/] {cmd}: {description}")
+                console.print(f"[yellow]✗[/yellow] {cmd}: {description}")
         elif verbose:
-            console.print(f"[green]✓[/] {cmd}: {description}")
+            console.print(f"[green]✓[/green] {cmd}: {description}")
 
     return len(missing) == 0, missing
 
@@ -143,7 +141,7 @@ def run_command(
         subprocess.CalledProcessError: If check=True and command fails
     """
     if verbose:
-        console.print(f"[dim]$ {' '.join(cmd)}[/]")
+        command(' '.join(cmd))
 
     return subprocess.run(
         cmd,
@@ -184,28 +182,25 @@ def validate_exe_path(exe_path: Path, chroot_path: Path | None = None) -> bool:
     """
     try:
         if not exe_path.exists():
-            console.print(
-                f"[bold red]Error:[/] The .exe does not exist at '{exe_path}'",
-            )
+            hint = None
             if chroot_path:
-                console.print(
-                    "[yellow]Hint:[/] Make sure the path is from the host perspective:",
+                hint = (
+                    f"Make sure the path is from the host perspective:\n"
+                    f"        {chroot_path}/root/.wine/drive_c/Program Files/..."
                 )
-                console.print(f"        {chroot_path}/root/.wine/drive_c/Program Files/...")
+            error(f"The .exe does not exist at '{exe_path}'", hint=hint)
             return False
 
         if not exe_path.is_file():
-            console.print(f"[bold red]Error:[/] Path exists but is not a file: '{exe_path}'")
+            error(f"Path exists but is not a file: '{exe_path}'")
             return False
 
         return True
 
     except PermissionError:
+        warning(f"Cannot verify if '{exe_path}' exists (permission denied)")
         console.print(
-            f"[yellow]Warning:[/] Cannot verify if '{exe_path}' exists (permission denied)",
-        )
-        console.print(
-            "            Continuing anyway. If the path is incorrect, execution will fail.",
+            "            Continuing anyway. If the path is incorrect, execution will fail."
         )
         return True  # Assume it exists, will fail later if not
 

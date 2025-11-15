@@ -9,9 +9,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
+from .console_styles import info, success, warning
 
 
 def extract_icon(
@@ -37,49 +35,48 @@ def extract_icon(
     """
     # Check if required tools are available
     if not shutil.which("wrestool"):
-        console.print(
-            "[yellow]Warning:[/] wrestool not found. Icon extraction disabled.",
+        warning(
+            "wrestool not found. Icon extraction disabled.",
+            hint="Install with: sudo apt install icoutils",
         )
-        console.print("           Install with: sudo apt install icoutils")
         return None
 
     if not shutil.which("icotool"):
-        console.print(
-            "[yellow]Warning:[/] icotool not found. Icon extraction disabled.",
+        warning(
+            "icotool not found. Icon extraction disabled.",
+            hint="Install with: sudo apt install icoutils",
         )
-        console.print("           Install with: sudo apt install icoutils")
         return None
 
     tmp_ico = Path("/tmp") / f"{icon_name}.ico"
     tmp_png_dir = Path("/tmp") / "wine_chroot_icons"
 
     if verbose:
-        console.print(f"[dim]Extracting icon from {exe_path}...[/]")
+        info(f"Extracting icon from {exe_path}...")
 
     # Step 1: Extract .ico from .exe using wrestool
     try:
         subprocess.run(
             ["sudo", "wrestool", "-x", "-t14", str(exe_path), "-o", str(tmp_ico)],
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
     except subprocess.CalledProcessError as e:
         if verbose:
-            console.print(
-                f"[yellow]wrestool failed: {e.stderr if e.stderr else 'unknown error'}[/]"
-            )
+            warning(f"wrestool failed: {e.stderr if e.stderr else 'unknown error'}")
         else:
-            console.print("[yellow]Warning:[/] Failed to extract .ico with wrestool")
+            warning("Failed to extract .ico with wrestool")
         return None
     except FileNotFoundError:
-        console.print("[yellow]Warning:[/] wrestool command not found")
-        console.print("           Install with: sudo apt install icoutils")
+        warning(
+            "wrestool command not found",
+            hint="Install with: sudo apt install icoutils",
+        )
         return None
 
     if not tmp_ico.exists():
-        console.print("[yellow]Warning:[/] wrestool did not produce an .ico file")
+        warning("wrestool did not produce an .ico file")
         return None
 
     # Step 2: Convert .ico to .png using icotool
@@ -89,25 +86,26 @@ def extract_icon(
         subprocess.run(
             ["icotool", "-x", str(tmp_ico), "-o", str(tmp_png_dir)],
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
     except subprocess.CalledProcessError as e:
         if verbose:
-            console.print(f"[yellow]icotool failed: {e.stderr if e.stderr else 'unknown error'}[/]")
+            warning(f"icotool failed: {e.stderr if e.stderr else 'unknown error'}")
         else:
-            console.print("[yellow]Warning:[/] Failed to convert .ico to .png")
+            warning("Failed to convert .ico to .png")
         return None
     except FileNotFoundError:
-        console.print("[yellow]Warning:[/] icotool command not found")
-        console.print("           Install with: sudo apt install icoutils")
+        warning(
+            "icotool command not found",
+            hint="Install with: sudo apt install icoutils",
+        )
         return None
 
     # Step 3: Find the largest PNG (usually the last one alphabetically)
     pngs = sorted(tmp_png_dir.glob("*.png"))
     if not pngs:
-        console.print("[yellow]Warning:[/] No .png files were extracted")
+        warning("No .png files were extracted")
         return None
 
     # Choose the largest PNG by filename (e.g., *_256x256x32.png)
@@ -119,7 +117,7 @@ def extract_icon(
     shutil.copy(chosen_png, final_icon)
 
     if verbose:
-        console.print(f"[green]Icon extracted to {final_icon}[/]")
+        success(f"Icon extracted to {final_icon}")
 
     # Cleanup
     try:

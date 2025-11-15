@@ -307,18 +307,39 @@ Note: -s/--show and -i/--init are mutually exclusive (one is required)
 
 - **Type hints**: Use type annotations for all functions
 - **Docstrings**: Google-style docstrings for all public functions
-- **Rich output**: Use rich.console for all user-facing messages
+- **Console output**: Use standardized console styles from `wine_chroot.console_styles`
 - **Error handling**: Graceful error messages, avoid stack traces for user errors
 - **Pathlib**: Use pathlib.Path instead of os.path
 - **f-strings**: Use f-strings for string formatting
+
+### Console Output Standards
+
+**All console output must use the standardized styles from `wine_chroot.console_styles`:**
+
+```python
+from wine_chroot import console, success, error, warning, info
+from wine_chroot import path, file, value, highlight
+
+# Status messages
+success("Operation completed")
+error("File not found", hint="Check the path")
+warning("Locale configuration failed")
+info("Checking system dependencies...")
+
+# Content formatting
+console.print(f"Installing to {path('/srv/debian-amd64')}")
+console.print(f"Created {file('wine-chroot.toml')}")
+console.print(f"Debian version: {value('trixie')}")
+console.print(f"Using {highlight('Wine')} in chroot")
+```
+
+**See `docs/CONSOLE_STYLE_GUIDE.md` for complete guidelines.**
 
 ### Example Code Pattern
 
 ```python
 from pathlib import Path
-from rich.console import Console
-
-console = Console()
+from wine_chroot import console, success, error, path as format_path
 
 def convert_path_to_windows(linux_path: Path) -> str:
     """Convert a Linux path to Windows format.
@@ -338,6 +359,27 @@ def convert_path_to_windows(linux_path: Path) -> str:
         win = after.replace("/", "\\")
         return f"C:\\{win}"
     return str(linux_path)
+
+# Using standardized console output
+def install_wine(chroot_path: Path, verbose: bool = False) -> bool:
+    """Install Wine in the chroot.
+
+    Args:
+        chroot_path: Path to the chroot
+        verbose: Enable verbose output
+
+    Returns:
+        True if successful, False otherwise
+    """
+    console.print(f"\nInstalling Wine in {format_path(str(chroot_path))}...")
+
+    try:
+        # ... installation logic ...
+        success("Wine installed successfully")
+        return True
+    except FileNotFoundError:
+        error("Required tools not found", hint="Install debootstrap and schroot")
+        return False
 ```
 
 ### Testing
@@ -352,13 +394,25 @@ def convert_path_to_windows(linux_path: Path) -> str:
 - **User errors**: Clear, actionable messages without stack traces
 
   ```python
-  console.print("[bold red]Error:[/] The .exe file does not exist at '{path}'")
-  console.print("[yellow]Hint:[/] Make sure the path is from the host perspective")
+  from wine_chroot import error
+
+  error(
+      f"The .exe file does not exist at '{path}'",
+      hint="Make sure the path is from the host perspective"
+  )
   raise SystemExit(1)
   ```
 
 - **System errors**: Show details with --verbose flag
 - **Missing dependencies**: Check at startup, provide installation instructions
+
+  ```python
+  from wine_chroot import error, console
+
+  error("Missing required tools: debootstrap, schroot")
+  console.print("\nInstall with:")
+  console.print("  sudo apt install debootstrap schroot")
+  ```
 
 ### Privilege Escalation: sudo vs pkexec
 

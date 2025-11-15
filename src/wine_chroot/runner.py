@@ -9,12 +9,9 @@ import os
 import subprocess
 from pathlib import Path
 
-from rich.console import Console
-
 from .config import Config
+from .console_styles import command, error, success, warning
 from .utils import linux_path_to_windows
-
-console = Console()
 
 
 class WineRunner:
@@ -90,7 +87,7 @@ class WineRunner:
             cmd.extend(args)
 
         if self.verbose:
-            console.print(f"[dim]$ {' '.join(cmd)}[/]")
+            command(" ".join(cmd))
 
         # Enable X11 access for local connections
         if self.config.get("execution.x11_forwarding", True):
@@ -122,15 +119,13 @@ class WineRunner:
                     start_new_session=True,
                 )
                 if self.verbose:
-                    console.print("[green]Application started in background[/]")
+                    success("Application started in background")
                 return 0
 
         except FileNotFoundError as exc:
-            console.print(
-                f"[bold red]Error:[/] Command not found: {privilege_cmd}",
-            )
-            console.print(
-                f"Please install {privilege_cmd} or update your configuration",
+            error(
+                f"Command not found: {privilege_cmd}",
+                hint=f"Install {privilege_cmd} or update your configuration",
             )
             raise SystemExit(1) from exc
 
@@ -164,7 +159,7 @@ class WineRunner:
         cmd.extend(wine_args)
 
         if self.verbose:
-            console.print(f"[dim]$ {' '.join(cmd)}[/]")
+            command(" ".join(cmd))
 
         return subprocess.run(
             cmd,
@@ -184,11 +179,11 @@ class WineRunner:
             if result.returncode == 0 and result.stdout:
                 version = result.stdout.strip()
                 if self.verbose:
-                    console.print(f"[green]Wine is installed: {version}[/]")
+                    success(f"Wine is installed: {version}")
                 return True
         except Exception as e:
             if self.verbose:
-                console.print(f"[yellow]Wine check failed: {e}[/]")
+                warning(f"Wine check failed: {e}")
 
         return False
 

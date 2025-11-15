@@ -14,6 +14,42 @@ Features:
 - TOML-based configuration management
 """
 
+from __future__ import annotations
+
 __version__ = "0.1.0"
 __author__ = "Wine Chroot Contributors"
 __license__ = "GPL-3.0-or-later"
+
+# Export standardized console utilities for internal use
+from .console_styles import (
+    Style,
+    command,
+    console,
+    error,
+    file,
+    highlight,
+    info,
+    path,
+    step,
+    success,
+    value,
+    warning,
+)
+
+__all__ = [
+    "__version__",
+    "__author__",
+    "__license__",
+    "console",
+    "success",
+    "error",
+    "warning",
+    "info",
+    "step",
+    "command",
+    "path",
+    "file",
+    "value",
+    "highlight",
+    "Style",
+]

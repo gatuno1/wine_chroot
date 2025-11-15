@@ -8,13 +8,10 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from rich.console import Console
-
 from .config import Config
+from .console_styles import console, error, info, success, warning
 from .icons import extract_icon, get_wine_icon
 from .utils import linux_path_to_windows, slugify, validate_exe_path
-
-console = Console()
 
 
 class DesktopManager:
@@ -125,29 +122,23 @@ class DesktopManager:
         desktop_content = "\n".join(lines) + "\n"
         desktop_file.write_text(desktop_content, encoding="utf-8")
 
-        console.print(
-            f"[green]Desktop launcher created:[/] {desktop_file}",
-        )
+        success(f"Desktop launcher created: {desktop_file}")
 
         # Update desktop database
         self._update_desktop_database(desktop_dir)
 
         # Show usage hints
         console.print()
-        console.print(f'[cyan]Look for "{app_name}" in your application menu[/]')
+        info(f'Look for "{app_name}" in your application menu')
 
         if self.config.use_pkexec:
-            console.print(
-                "[yellow]Note:[/] Using pkexec may cause issues with some applications.",
-            )
+            warning("Using pkexec may cause issues with some applications.")
             console.print(
                 "       Consider using sudo for better reliability "
                 "(set use_pkexec = false in config).",
             )
         else:
-            console.print(
-                "[yellow]Tip:[/] To avoid password prompts when launching, add a sudoers entry:",
-            )
+            info("To avoid password prompts when launching, add a sudoers entry:")
             console.print(
                 "     echo '$USER ALL=(ALL) NOPASSWD: /usr/bin/schroot' | "
                 "sudo tee /etc/sudoers.d/schroot",
@@ -168,8 +159,7 @@ class DesktopManager:
             subprocess.run(
                 ["update-desktop-database", str(desktop_dir)],
                 check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
             )
             if self.verbose:
@@ -225,14 +215,14 @@ class DesktopManager:
         try:
             if desktop_file.exists():
                 desktop_file.unlink()
-                console.print(f"[green]Removed launcher:[/] {desktop_file}")
+                success(f"Removed launcher: {desktop_file}")
                 self._update_desktop_database(self.config.applications_dir)
                 return True
             else:
-                console.print(f"[yellow]Launcher not found:[/] {desktop_file}")
+                warning(f"Launcher not found: {desktop_file}")
                 return False
         except Exception as e:
-            console.print(f"[bold red]Error:[/] Failed to remove launcher: {e}")
+            error(f"Failed to remove launcher: {e}")
             return False
 
     def list_wine_applications(self) -> list[dict]:

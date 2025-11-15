@@ -57,3 +57,6 @@ htmlcov/
 # Configuration (user-specific)
 wine-chroot.toml
 !wine-chroot.toml.example
+
+# design files
+docs/design/

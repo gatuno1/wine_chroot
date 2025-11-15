@@ -134,7 +134,7 @@ uv tool install .
 
 ### Setting Up the Chroot
 
-**Option 1: Automated Setup (Recommended)**
+**Option 1 - Automated Setup (Recommended):**
 
 Use the `wine-chroot init` command to automatically create and configure the chroot:
 
@@ -157,7 +157,7 @@ The init command will:
 - Set up locales and repositories
 - Verify the installation
 
-**Option 2: Manual Setup**
+**Option 2 - Manual Setup:**
 
 If you prefer manual configuration or need more control, follow the detailed guide in [docs/chroot-setup.md](docs/chroot-setup.md).
 
@@ -397,7 +397,7 @@ echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/schroot" | sudo tee /etc/sudoers.d/schr
 sudo chmod 0440 /etc/sudoers.d/schroot
 ```
 
-**Alternative: Using pkexec**
+**Alternative Using pkexec:**
 
 You can configure the tool to use `pkexec` instead of `sudo`:
 
@@ -435,20 +435,6 @@ echo $DISPLAY
 - **Bugs or features**: Open an issue on GitHub
 - **General questions**: Use GitHub Discussions
 
-## Comparison with Other Solutions
-
-**Wine Chroot vs Box64:**
-
-- Wine Chroot provides full x86-64 Wine support without compatibility layers
-- Better compatibility with complex Windows applications
-- Uses real Debian packages instead of custom builds
-
-**Wine Chroot vs CrossOver:**
-
-- Free and open source (GPL-3.0-or-later)
-- More transparent architecture
-- Full control over Wine version and configuration
-
 ## License
 
 This project is distributed under the terms of the **GNU General Public License version 3** (or, at your option, any later version).
@@ -468,7 +454,6 @@ Contributions are welcome! Please see the [Development Guide](docs/DEVELOPMENT.m
 ## Acknowledgments
 
 - **Wine Project**: For the Windows compatibility layer
-- **Debian**: For the stable base system
 - **QEMU**: For ARM64 → x86-64 emulation
 - **schroot**: For chroot management
 

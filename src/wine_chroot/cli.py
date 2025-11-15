@@ -9,18 +9,16 @@ import argparse
 import sys
 from pathlib import Path
 
-from rich.console import Console
 from rich.table import Table
 from rich_argparse import RichHelpFormatter
 
 from . import __version__
 from .chroot import ChrootManager
 from .config import Config, create_example_config
+from .console_styles import console, error, info, warning
 from .desktop import DesktopManager
 from .runner import WineRunner
 from .utils import check_system_dependencies, validate_exe_path
-
-console = Console()
 
 
 def cmd_run(args: argparse.Namespace, config: Config) -> int:
@@ -44,12 +42,8 @@ def cmd_run(args: argparse.Namespace, config: Config) -> int:
 
     # Check Wine installation first
     if not runner.check_wine_installation():
-        console.print(
-            "[bold red]Error:[/] Wine is not installed in the chroot",
-        )
-        console.print(
-            f"Run: wine-chroot init --name {config.chroot_name}",
-        )
+        error("Wine is not installed in the chroot")
+        console.print(f"Run: wine-chroot init --name {config.chroot_name}")
         return 1
 
     return runner.run(
@@ -103,7 +97,7 @@ def cmd_list(args: argparse.Namespace, config: Config) -> int:
         launchers = manager.list_desktop_files()
 
         if not launchers:
-            console.print("[yellow]No Wine launchers found[/]")
+            warning("No Wine launchers found")
             return 0
 
         table = Table(title="Wine Launchers")
@@ -117,13 +111,11 @@ def cmd_list(args: argparse.Namespace, config: Config) -> int:
 
     else:
         # List applications in chroot
-        console.print("[cyan]Scanning chroot for Windows applications...[/]")
+        info("Scanning chroot for Windows applications...")
         applications = manager.list_wine_applications()
 
         if not applications:
-            console.print(
-                "[yellow]No Windows applications found in chroot[/]",
-            )
+            warning("No Windows applications found in chroot")
             return 0
 
         table = Table(title="Windows Applications")
@@ -486,11 +478,11 @@ def main() -> int:
 
     # Check system dependencies
     if args.verbose:
-        console.print("[cyan]Checking system dependencies...[/]")
+        info("Checking system dependencies...")
         all_ok, missing = check_system_dependencies(verbose=True)
         if not all_ok:
             console.print()
-            console.print("[yellow]Some dependencies are missing:[/]")
+            warning("Some dependencies are missing:")
             for cmd in missing:
                 console.print(f"  - {cmd}")
             console.print()
@@ -513,19 +505,19 @@ def main() -> int:
 
     handler = commands.get(args.command)
     if not handler:
-        console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
+        error(f"Unknown command: {args.command}")
         return 1
 
     try:
         return handler(args, config)
     except KeyboardInterrupt:
-        console.print("\n[yellow]Interrupted[/]")
+        warning("\nInterrupted")
         return 130
     except Exception as e:
         if args.verbose:
             console.print_exception()
         else:
-            console.print(f"[bold red]Error:[/] {e}")
+            error(str(e))
         return 1
 
 

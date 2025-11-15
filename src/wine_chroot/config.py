@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
+from .console_styles import console, error, file, success, warning
 
 # Use tomllib (Python 3.11+) or tomli (fallback)
 if sys.version_info >= (3, 11):
@@ -19,8 +19,6 @@ else:
         import tomli as tomllib
     except ImportError:
         tomllib = None  # type: ignore
-
-console = Console()
 
 
 class Config:
@@ -44,9 +42,7 @@ class Config:
         if config_path:
             self.config_path = config_path
             if not self.config_path.exists():
-                console.print(
-                    f"[yellow]Warning:[/] Config file not found: {config_path}",
-                )
+                warning(f"Config file not found: {config_path}")
                 console.print("Using default configuration")
         else:
             # Search for config in default locations
@@ -68,9 +64,7 @@ class Config:
             return
 
         if tomllib is None:
-            console.print(
-                "[bold red]Error:[/] TOML parser not available",
-            )
+            error("TOML parser not available")
             console.print("Install tomli: uv pip install tomli")
             raise SystemExit(1)
 
@@ -78,13 +72,11 @@ class Config:
             with open(self.config_path, "rb") as f:
                 self.data = tomllib.load(f)
             console.print(
-                f"[dim]Loaded configuration from {self.config_path}[/]",
+                f"[dim]Loaded configuration from {self.config_path}[/dim]",
                 highlight=False,
             )
         except Exception as e:
-            console.print(
-                f"[bold red]Error:[/] Failed to load config: {e}",
-            )
+            error(f"Failed to load config: {e}")
             self._set_defaults()
 
     def _set_defaults(self) -> None:
@@ -166,11 +158,11 @@ class Config:
                 f.write("# Wine Chroot Configuration\n\n")
                 self._write_section(f, self.data)
 
-            console.print(f"[green]Configuration saved to {save_path}[/]")
+            success(f"Configuration saved to {file(str(save_path))}")
             self.config_path = save_path
 
         except Exception as e:
-            console.print(f"[bold red]Error:[/] Failed to save config: {e}")
+            error(f"Failed to save config: {e}")
 
     def _write_section(self, f, data: dict, parent_key: str = "") -> None:
         """Recursively write TOML sections.
@@ -298,4 +290,4 @@ x11_forwarding = true
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(example)
 
-    console.print(f"[green]Created example configuration at {output_path}[/]")
+    success(f"Created example configuration at {file(str(output_path))}")
