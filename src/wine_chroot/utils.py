@@ -71,15 +71,30 @@ def windows_path_to_linux(win_path: str, chroot_path: Path, wine_prefix: str = "
 
 
 def check_command_exists(command_name: str) -> bool:
-    """Check if a command exists in PATH.
+    """Check if a command exists in PATH or common system directories.
 
     Args:
-        command: Command name to check
+        command_name: Command name to check
 
     Returns:
         True if command exists, False otherwise
     """
-    return shutil.which(command_name) is not None
+    # First check in PATH
+    if shutil.which(command_name) is not None:
+        return True
+
+    # Check common system directories not always in PATH
+    system_paths = [
+        Path("/usr/sbin") / command_name,
+        Path("/sbin") / command_name,
+        Path("/usr/local/sbin") / command_name,
+    ]
+
+    for path in system_paths:
+        if path.exists() and path.is_file():
+            return True
+
+    return False
 
 
 def check_system_dependencies(verbose: bool = False) -> tuple[bool, list[str]]:
