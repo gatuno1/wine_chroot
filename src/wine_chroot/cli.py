@@ -279,6 +279,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-v",
         "--verbose",
         action="store_true",
+        default=True,
         help="Enable verbose output",
     )
 
