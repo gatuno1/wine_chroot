@@ -105,16 +105,18 @@ Settings (`.vscode/settings.json`):
 
 ### Directory Structure
 
-```
+```asciiart
 wine_chroot/
 ├── src/
 │   └── wine_chroot/           # Main package
 │       ├── __init__.py        # Package metadata
 │       ├── cli.py             # CLI interface (argparse + rich)
+│       ├── chroot.py          # Chroot initialization and management
 │       ├── config.py          # TOML configuration management
-│       ├── runner.py          # Wine execution wrapper
+│       ├── console_styles.py  # Standardized console output styles
 │       ├── desktop.py         # .desktop file creation
 │       ├── icons.py           # Icon extraction (wrestool/icotool)
+│       ├── runner.py          # Wine execution wrapper
 │       └── utils.py           # Path conversion, validation
 ├── docs/
 │   ├── chroot-setup.md        # Chroot setup guide (Spanish)
@@ -131,36 +133,50 @@ wine_chroot/
 ### Module Overview
 
 #### `cli.py`
+
 - **Purpose**: Command-line interface using argparse + rich-argparse
 - **Commands**: `run`, `desktop`, `list`, `config`, `init`, `version`
 - **Key functions**: `build_parser()`, `cmd_*()`, `main()`
 
 #### `config.py`
+
 - **Purpose**: TOML configuration file management
 - **Key classes**: `Config`
 - **Features**: Default values, property accessors, file generation
 
+#### `console_styles.py`
+
+- **Purpose**: Standardized console output formatting using Rich
+- **Key functions**: `success()`, `error()`, `warning()`, `info()`, `step()`, `command()`
+- **Key formatters**: `path()`, `file()`, `value()`, `highlight()`
+- **Features**: Consistent styling across all modules, color-coded messages, hints for errors
+
 #### `chroot.py`
+
 - **Purpose**: Chroot initialization and management
 - **Key classes**: `ChrootManager`
 - **Features**: Automated chroot creation, debootstrap wrapper, Wine installation, verification
 
 #### `runner.py`
+
 - **Purpose**: Execute Windows applications through Wine in chroot
 - **Key classes**: `WineRunner`
 - **Features**: Path conversion, X11 forwarding, sudo/pkexec support
 
 #### `desktop.py`
+
 - **Purpose**: Desktop integration (.desktop file management)
 - **Key classes**: `DesktopManager`
 - **Features**: Launcher creation, application discovery, icon integration
 
 #### `icons.py`
+
 - **Purpose**: Icon extraction from Windows executables
 - **Key functions**: `extract_icon()`, `find_system_icon()`
 - **Dependencies**: `wrestool`, `icotool` (icoutils package)
 
 #### `utils.py`
+
 - **Purpose**: Shared utilities
 - **Key functions**: `linux_path_to_windows()`, `check_system_dependencies()`, `slugify()`
 
@@ -322,38 +338,52 @@ def convert_path(linux_path: Path, chroot_path: Path) -> str:
     raise ValueError(f"Path not in Wine prefix: {linux_path}")
 ```
 
-### Rich Console Output
+### Console Output Standards
 
-Always use rich for user-facing output:
+**Always use the standardized console styles from `console_styles.py`:**
 
 ```python
-from rich.console import Console
+from wine_chroot.console_styles import console, success, error, warning, info, step
+from wine_chroot.console_styles import path, file, value, highlight
 
-console = Console()
+# Status messages
+success("Operation completed successfully")
+error("File not found", hint="Check the path and try again")
+warning("Configuration may be incomplete")
+info("Processing files...")
 
-# Success messages
-console.print("[green]Operation successful[/]")
+# Numbered steps (for multi-step operations)
+step(1, "Checking prerequisites...")
+step(2, "Installing dependencies...")
 
-# Errors
-console.print("[bold red]Error:[/] Something went wrong")
+# Formatting helpers
+console.print(f"Installing to {path('/srv/debian-amd64')}")
+console.print(f"Created {file('wine-chroot.toml')}")
+console.print(f"Debian version: {value('trixie')}")
+console.print(f"Using {highlight('Wine')} in chroot")
 
-# Warnings
-console.print("[yellow]Warning:[/] Check your configuration")
-
-# Info
-console.print("[cyan]Info:[/] Processing files...")
-
-# Dim/secondary text
-console.print("[dim]This is less important[/]")
+# For custom formatting (when helpers don't fit)
+console.print("[green]Custom message[/]")
+console.print("[dim]Secondary information[/]")
 ```
+
+**Benefits of using console_styles:**
+- Consistent look and feel across the application
+- Centralized styling that can be updated in one place
+- Built-in hint support for errors and warnings
+- Clear semantic meaning (success, error, warning, info)
 
 ### Error Handling
 
 ```python
+from wine_chroot.console_styles import console, error, warning
+
 # User errors: Clear messages without stack traces
 if not exe_path.exists():
-    console.print(f"[bold red]Error:[/] File not found: {exe_path}")
-    console.print("[yellow]Hint:[/] Check the path and try again")
+    error(
+        f"File not found: {exe_path}",
+        hint="Check the path and try again"
+    )
     raise SystemExit(1)
 
 # System errors: Show details in verbose mode
@@ -363,8 +393,15 @@ except subprocess.CalledProcessError as e:
     if verbose:
         console.print_exception()
     else:
-        console.print(f"[bold red]Error:[/] Command failed: {e}")
+        error(f"Command failed: {e}")
     return 1
+
+# Warnings for non-critical issues
+if not config_file.exists():
+    warning(
+        "Configuration file not found",
+        hint="Using default settings"
+    )
 ```
 
 ## Testing
@@ -538,6 +575,7 @@ git commit -m "feat: add amazing feature"
 ```
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
+
 - `feat:` New features
 - `fix:` Bug fixes
 - `docs:` Documentation changes

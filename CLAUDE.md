@@ -444,30 +444,6 @@ The tool uses `sudo` for schroot access by default instead of `pkexec` for the f
 }
 ```
 
-## Migration from Current Code
-
-### What to Keep
-
-1. Icon extraction logic (wrestool + icotool) from `make_wine_chroot_desktop.py`
-2. Path conversion functions (Linux ↔ Windows)
-3. Desktop file generation structure
-4. GPL-3.0-or-later license headers
-
-### What to Remove
-
-- bash/ directory (consolidate into Python)
-- python/ directory (move to src/wine_chroot/)
-- Duplicate functionality between bash and Python versions
-
-### What to Add
-
-1. `wine-chroot init` command for chroot creation
-2. `wine-chroot run` command as improved winegui.sh replacement
-3. `wine-chroot list` command for application discovery
-4. Configuration file system (wine-chroot.toml)
-5. Comprehensive error checking and validation
-6. Progress bars for long operations (debootstrap, Wine installation)
-
 ## Implementation Phases
 
 ### Phase 1: Core Restructuring ✓
@@ -502,13 +478,41 @@ The tool uses `sudo` for schroot access by default instead of `pkexec` for the f
 - ✅ Implement list command with app discovery
 - ✅ Desktop file generation with proper metadata
 
-### Phase 6: Documentation & Testing ✓
+### Phase 6: Documentation & Testing
 
 - ✅ Update README.md with new CLI usage
 - ✅ Create docs/chroot-setup.md with detailed guide
 - ✅ Create docs/DEVELOPMENT.md for contributors
 - ✅ Comprehensive project documentation
-- ⏳ Add comprehensive unit tests (in progress)
+- ⏳ Unit tests for core functionality (in progress)
+  - Path conversion utilities
+  - Configuration parsing and validation
+  - Desktop file generation
+  - Icon extraction workflows
+- ⏳ Integration tests for chroot operations
+  - Requires root privileges and test environment
+  - Mock subprocess calls where appropriate
+
+### Phase 7: Packaging & Distribution
+
+- ⏳ Continuous Integration/Continuous Deployment
+  - Set up GitHub Actions workflow
+  - Automated testing on push/PR
+  - Code quality checks (pylint, mypy, black)
+  - Coverage reporting
+- ⏳ PyPI Package Publishing
+  - Prepare package metadata and long description
+  - Configure build system (already using pyproject.toml)
+  - Publish to PyPI for `pip install wine-chroot`
+  - Version management and release automation
+- ⏳ Debian Package (.deb)
+  - Create debian/ directory with package metadata
+  - Build .deb package for easier distribution
+  - Consider submitting to Debian repositories
+- ⏳ Documentation Hosting
+  - GitHub Pages or Read the Docs
+  - API documentation with sphinx
+  - User guides and tutorials
 
 ## Future Enhancements
 

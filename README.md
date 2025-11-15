@@ -321,10 +321,12 @@ wine_chroot/
 ├── src/
 │   └── wine_chroot/         # Main package
 │       ├── cli.py           # CLI interface
+│       ├── chroot.py        # Chroot initialization and management
 │       ├── config.py        # Configuration management
-│       ├── runner.py        # Wine execution
+│       ├── console_styles.py # Standardized console output
 │       ├── desktop.py       # Desktop integration
 │       ├── icons.py         # Icon extraction
+│       ├── runner.py        # Wine execution
 │       └── utils.py         # Utilities
 ├── docs/
 │   ├── README.md            # Documentation index
