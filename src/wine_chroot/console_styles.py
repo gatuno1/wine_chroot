@@ -12,12 +12,78 @@ from __future__ import annotations
 from rich.console import Console
 
 # Global console instance for the entire project
-console = Console()
+_console = Console()
+
+
+class _SilentModeState:  # pylint: disable=too-few-public-methods
+    """Encapsulate silent mode state to avoid global variables.
+
+    This is a simple state container, so it intentionally has no methods.
+    """
+
+    def __init__(self):
+        self.enabled = False
+
+
+_silent_state = _SilentModeState()
+
+
+class SilentConsole:
+    """Console wrapper that respects silent mode."""
+
+    @property
+    def _real_console(self) -> Console:
+        """Get the underlying rich Console for direct use (e.g., with Progress).
+
+        This is needed when passing console to Rich widgets that expect a Console instance.
+        """
+        return _console
+
+    def print(self, *args, **kwargs) -> None:
+        """Print to console if not in silent mode."""
+        if not _silent_state.enabled:
+            _console.print(*args, **kwargs)
+
+    def print_exception(self, *args, **kwargs) -> None:
+        """Print exception traceback if not in silent mode."""
+        if not _silent_state.enabled:
+            _console.print_exception(*args, **kwargs)
+
+    def __getattr__(self, name):
+        """Forward all other attributes to the real console."""
+        return getattr(_console, name)
+
+
+# Export the wrapped console
+console = SilentConsole()
+
+
+def set_silent_mode(silent: bool) -> None:
+    """Enable or disable silent mode.
+
+    When silent mode is enabled, all console output is suppressed.
+
+    Args:
+        silent: True to enable silent mode, False to disable
+    """
+    _silent_state.enabled = silent
+
+
+def is_silent() -> bool:
+    """Check if silent mode is enabled.
+
+    Returns:
+        True if silent mode is enabled
+    """
+    return _silent_state.enabled
 
 
 # Message Types
-class Style:
-    """Standard Rich markup styles for console messages."""
+class Style:  # pylint: disable=too-few-public-methods
+    """Standard Rich markup styles for console messages.
+
+    This is a constants-only class, so it intentionally has no methods.
+    """
 
     # Status messages
     SUCCESS = "[bold green]✓[/bold green]"
@@ -55,7 +121,8 @@ def success(message: str) -> None:
         >>> success("Installation completed")
         ✓ Installation completed
     """
-    console.print(f"{Style.SUCCESS} {message}")
+    if not _silent_state.enabled:
+        console.print(f"{Style.SUCCESS} {message}")
 
 
 def error(message: str, hint: str | None = None) -> None:
@@ -70,9 +137,10 @@ def error(message: str, hint: str | None = None) -> None:
         Error: File not found
         Hint: Check the path and try again
     """
-    console.print(f"{Style.ERROR} {message}")
-    if hint:
-        console.print(f"[yellow]Hint:[/yellow] {hint}")
+    if not _silent_state.enabled:
+        console.print(f"{Style.ERROR} {message}")
+        if hint:
+            console.print(f"[yellow]Hint:[/yellow] {hint}")
 
 
 def warning(message: str, hint: str | None = None) -> None:
@@ -89,9 +157,10 @@ def warning(message: str, hint: str | None = None) -> None:
         Warning: Tool not found
         Hint: Install with: sudo apt install tool
     """
-    console.print(f"{Style.WARNING} {message}")
-    if hint:
-        console.print(f"[yellow]Hint:[/yellow] {hint}")
+    if not _silent_state.enabled:
+        console.print(f"{Style.WARNING} {message}")
+        if hint:
+            console.print(f"[yellow]Hint:[/yellow] {hint}")
 
 
 def info(message: str) -> None:
@@ -104,7 +173,8 @@ def info(message: str) -> None:
         >>> info("Checking system dependencies...")
         ℹ Checking system dependencies...
     """
-    console.print(f"[{Style.CYAN}]{message}[/{Style.CYAN}]")
+    if not _silent_state.enabled:
+        console.print(f"[{Style.CYAN}]{message}[/{Style.CYAN}]")
 
 
 def step(number: int, message: str) -> None:
@@ -120,7 +190,8 @@ def step(number: int, message: str) -> None:
         >>> step(2, "Creating base system...")
         2. Creating base system...
     """
-    console.print(f"[{Style.CYAN}]{number}.[/{Style.CYAN}] {message}")
+    if not _silent_state.enabled:
+        console.print(f"[{Style.CYAN}]{number}.[/{Style.CYAN}] {message}")
 
 
 def command(cmd: str) -> None:
@@ -133,7 +204,8 @@ def command(cmd: str) -> None:
         >>> command("sudo apt install wine")
         $ sudo apt install wine
     """
-    console.print(f"[{Style.DIM}]$ {cmd}[/{Style.DIM}]")
+    if not _silent_state.enabled:
+        console.print(f"[{Style.DIM}]$ {cmd}[/{Style.DIM}]")
 
 
 def path(p: str) -> str:

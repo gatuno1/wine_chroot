@@ -17,7 +17,7 @@ from .utils import linux_path_to_windows, slugify, validate_exe_path
 class DesktopManager:
     """Manages creation and management of .desktop files for Wine applications."""
 
-    def __init__(self, config: Config, verbose: bool = False):
+    def __init__(self, config: Config, verbose: bool = True):
         """Initialize desktop manager.
 
         Args:

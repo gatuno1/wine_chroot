@@ -243,6 +243,7 @@ CHROOT_USER="$(whoami)"
 
 # Ejecuta el comando en el chroot
 sudo schroot -c "$CHROOT_NAME" --user="$CHROOT_USER" -- wine "$@"
+#sudo schroot -c debian-amd64 --user="gatuno" -- wine "$@"
 ```
 
 Dale permisos y muévelo a una ruta accesible:

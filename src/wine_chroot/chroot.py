@@ -19,7 +19,7 @@ from .utils import check_command_exists
 class ChrootManager:
     """Manages chroot creation, configuration, and validation."""
 
-    def __init__(self, config: Config, verbose: bool = False):
+    def __init__(self, config: Config, verbose: bool = True):
         """Initialize chroot manager.
 
         Args:
@@ -234,7 +234,6 @@ class ChrootManager:
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                console=console,
             ) as progress:
                 task = progress.add_task("Installing base system...", total=None)
 
@@ -604,10 +603,8 @@ deb http://security.debian.org/debian-security {debian_version}-security main co
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                console=console,
             ) as progress:
                 task = progress.add_task("Installing Wine packages...", total=None)
-
                 subprocess.run(
                     [
                         "sudo",

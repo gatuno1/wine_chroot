@@ -12,10 +12,10 @@ from pathlib import Path
 from rich.table import Table
 from rich_argparse import RichHelpFormatter
 
-from . import __version__
+from . import __version__, exit_codes
 from .chroot import ChrootManager
 from .config import Config, create_example_config
-from .console_styles import console, error, info, warning
+from .console_styles import console, error, info, set_silent_mode, warning
 from .desktop import DesktopManager
 from .runner import WineRunner
 from .utils import check_system_dependencies, validate_exe_path
@@ -275,12 +275,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to '[argparse.default]wine-chroot.toml[/]' configuration file",
     )
 
+    def parse_bool(value: str) -> bool:
+        """Parse boolean values from string.
+
+        Accepts: true, on, 1 (case-insensitive) as True
+        Accepts: false, off, 0 (case-insensitive) as False
+        """
+        normalized = value.lower().strip()
+        if normalized in {"true", "on", "1"}:
+            return True
+        if normalized in {"false", "off", "0"}:
+            return False
+        raise argparse.ArgumentTypeError(
+            f"Invalid boolean value: '{value}'. Valid values: true/on/1 or false/off/0"
+        )
+
     parser.add_argument(
         "-v",
         "--verbose",
-        action="store_true",
+        type=parse_bool,
         default=True,
-        help="Enable verbose output",
+        metavar="{true|on|1|false|off|0}",
+        help="Enable verbose output (default: true). Accepts: true/on/1 or false/off/0",
+    )
+
+    parser.add_argument(
+        "-s",
+        "--silent",
+        action="store_true",
+        default=False,
+        help="Silent mode: suppress all output, only return exit codes",
     )
 
     parser.add_argument(
@@ -470,15 +494,19 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
+    # Enable silent mode if requested
+    if args.silent:
+        set_silent_mode(True)
+
     # Handle --version flag
     if args.version:
         console.print(f"wine-chroot version {__version__}")
-        return 0
+        return exit_codes.SUCCESS
 
     # Require a command
     if not args.command:
         parser.print_help()
-        return 1
+        return exit_codes.INVALID_ARGUMENTS
 
     # Check system dependencies
     if args.verbose:

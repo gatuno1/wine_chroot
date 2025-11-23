@@ -17,7 +17,7 @@ from .utils import linux_path_to_windows
 class WineRunner:
     """Manages execution of Windows applications through Wine in a chroot."""
 
-    def __init__(self, config: Config, verbose: bool = False):
+    def __init__(self, config: Config, verbose: bool = True):
         """Initialize Wine runner.
 
         Args:

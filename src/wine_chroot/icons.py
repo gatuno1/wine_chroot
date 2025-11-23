@@ -16,7 +16,7 @@ def extract_icon(
     exe_path: Path,
     icon_dir: Path,
     icon_name: str,
-    verbose: bool = False,
+    verbose: bool = True,
 ) -> Path | None:
     """Extract icon from .exe file using wrestool and icotool.
 
@@ -24,7 +24,7 @@ def extract_icon(
         exe_path: Path to the .exe file
         icon_dir: Directory where to save the extracted icon
         icon_name: Base name for the icon file (without extension)
-        verbose: Print detailed extraction information
+        verbose: Enable verbose output
 
     Returns:
         Path to the extracted .png icon, or None if extraction failed
