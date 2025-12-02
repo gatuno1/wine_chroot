@@ -4,8 +4,6 @@ Este documento describe cómo ejecutar aplicaciones Windows x86/x64 en un sistem
 
 El objetivo es reemplazar la necesidad de emuladores parciales (como Box64 o FEX-Emu) mediante un entorno chroot real con soporte multi-arquitectura i386+amd64, ejecutado sobre QEMU user-static.
 
-> **Nota**: Este documento describe el proceso manual. Para una instalación automatizada, puedes usar el comando `wine-chroot init`. Consulta el `README.md` para más detalles.
-
 ## Arquitectura del Sistema
 
 | Componente             | Rol                                                | Descripción                                |
@@ -25,6 +23,8 @@ Instala las herramientas necesarias en tu sistema ARM64:
 ```bash
 sudo apt install debootstrap schroot qemu-user-static binfmt-support
 ```
+
+donde los paquetes son:
 
 - `debootstrap`: Crea un sistema Debian base.
 - `schroot`: Administra entornos chroot.
@@ -51,16 +51,17 @@ Crea el archivo de configuración para tu chroot en `/etc/schroot/chroot.d/debia
 
 ```ini
 [debian-amd64]
-description=Debian Trixie amd64 chroot
+description=Debian amd64 chroot virtual environment
 directory=/srv/debian-amd64
 type=directory
 users=<tu_usuario>
+groups=<tu_usuario>
 root-users=<tu_usuario>
 personality=linux
 preserve-environment=true
 ```
 
-- Reemplaza `<tu_usuario>` con tu nombre de usuario en el sistema host.
+- Reemplaza `<tu_usuario>` con tu nombre de usuario en el sistema host arm64.
 - `directory` apunta a la ruta del sistema chroot creado, usando el nombre del chroot.
 - `personality=linux`: Asegura la compatibilidad del entorno.
 - `preserve-environment=true`: Propaga variables de entorno como `DISPLAY` y `HOME` del host al chroot.
@@ -72,18 +73,127 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
 ```fstab
 # fstab: static file system information for chroots.
 # <file system> <mount point>   <type>  <options>  <dump>  <pass>
+# habilitar acceso a dispositivos para wine
 /dev            /dev            none    rw,bind    0       0
+# habilitar pseudo-terminales para wine
 /dev/pts        /dev/pts        none    rw,bind    0       0
+# habilitar acceso a home del usuario
 /home           /home           none    rw,bind    0       0
+# habilitar acceso a sistema de archivos virtuales
 /proc           /proc           none    rw,bind    0       0
+/run            /run            none    rw,bind    0       0
 /sys            /sys            none    rw,bind    0       0
 /tmp            /tmp            none    rw,bind    0       0
+# habilitar acceso a sockets X11 para aplicaciones gráficas
 /tmp/.X11-unix  /tmp/.X11-unix  none    rw,bind    0       0
 ```
 
-### 5. Entrar y Configurar el Chroot
+### 5. Probar que schroot ve el ambiente
 
-Accede al chroot para configurarlo:
+- **Listar el ambiente dentro del schroot**
+
+  Desde el host, ejecuta:
+
+  ```bash
+  $ schroot --list
+  chroot:debian-amd64
+  ```
+
+- **Verificar las arquitecturas**
+
+  Desde el host, ejecuta:
+
+  ```bash
+  # arquitectura del host
+  $ uname -m
+  aarch64
+  # arquitectura dentro del ambiente chroot 
+  $ sudo schroot -c debian-amd64 -- uname -m
+  x86_64
+  ```
+
+  El primero muestra 'aarch64' que es arm64 para este caso, mientras que la emulada es 'x86_64'.
+
+- **Listar sesiones activas**
+
+   Inicia una sesión interactiva en el chroot:
+
+   ```bash
+   sudo schroot -c debian-amd64
+   ```
+
+   Luego, en otra terminal del host, lista las sesiones activas:
+
+   ```bash
+   $ schroot --list --all-sessions
+   session:debian-amd64-cc4874c1-892f-4627-a9c7-5b9956bd7de7
+   ```
+
+#### ¿Como 'reiniciarlo' si hay problemas?
+
+- **Finalizar todas las sesiones activas**
+
+  Desde el host, ejecuta:
+
+  ```bash
+  sudo schroot --end-session --all-sessions
+  ```
+
+- **Finalizar sesión específica**
+
+  Desde el host, ejecuta:
+
+  ```bash
+  sudo schroot --end-session -c <nombre-sesion>
+  ```
+
+- **Matar procesos huérfanos del chroot**
+
+  Esto ayuda muchísimo cuando Wine dejó procesos colgados.
+
+  ```bash
+  sudo schroot -c debian-amd64 -- pkill -9 wine
+  ```
+
+- **Limpiar lockfiles**
+
+  ```bash
+  sudo rm -f '/run/schroot/*' '/var/lib/schroot/session/*' '/var/lib/schroot/mount/*' 2>/dev/null
+  ```
+
+- **Volver a cargar la configuración**: como “reiniciar” schroot
+
+  Si cambiaste archivos en:
+
+  - `/etc/schroot/chroot.d/*`
+  - `/etc/schroot/schroot.conf`
+  - `/etc/schroot/default/*`
+
+  Entonces:
+
+  ```bash
+  sudo schroot --debug-level=notice --info
+  ```
+
+  Si quieres asegurarte:
+
+  ```bash
+  sudo schroot -c debian-amd64 -- true
+  ```
+
+  Si entra sin errores, la configuración ya está aplicada.
+
+- **Reinicio “completo” del sistema chroot**: equivalente a reboot**
+
+  ```bash
+  sudo schroot --end-session --all-sessions
+  sudo umount -R /srv/debian-amd64
+  sudo mount -a   # vuelve a montar bind mounts incluyendo los del chroot
+  ```
+
+### 6. Entrar y Configurar el Chroot
+
+Accede al chroot para configurarlo, usando el shell por defecto:
 
 ```bash
 sudo schroot -c debian-amd64
@@ -95,14 +205,23 @@ Una vez dentro, ejecuta los siguientes comandos:
 
 ```bash
 apt update
-apt install locales gnupg2 wget
+# instalar locales primero para evitar problemas con paquetes que dependen de la localización
+apt install locales
 dpkg-reconfigure locales  # Selecciona tu localización (ej. es_CL.UTF-8, en_US.UTF-8)
+apt install gnupg2 wget
+```
+
+debería tener algo así en `/etc/environment`:
+
+```text
+LANG="es_CL.UTF-8"
+LC_ALL="es_CL.UTF-8"
 ```
 
 **b. Editar `/etc/apt/sources.list`:**
 Asegúrate de que tu `sources.list` contenga los repositorios `main`, `contrib`, `non-free` y `non-free-firmware` para Trixie.
 
-```text
+```source-list
 # Main
 deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
 # deb-src http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
@@ -128,10 +247,17 @@ dpkg --add-architecture i386
 apt update
 ```
 
+Verifica que esté activa:
+
+```bash
+$ dpkg --print-foreign-architectures
+i386
+```
+
 **d. Instalar Wine y herramientas:**
 
 ```bash
-apt install -y wine wine32 wine64 winetricks wine-binfmt fonts-wine q4wine --install-recommends
+apt install -y wine wine32 wine64 winetricks wine-binfmt fonts-wine q4wine xterm icoutils --install-recommends
 ```
 
 donde:
@@ -140,6 +266,8 @@ donde:
 - `winetricks`: Script para instalar librerías y componentes adicionales.
 - `fonts-wine`: Fuentes tipográficas comunes para aplicaciones Windows.
 - `q4wine`: Interfaz gráfica para gestionar configuraciones de Wine.
+- `xterm`: Terminal para ejecutar aplicaciones gráficas de Wine.
+- `icoutils`: Herramientas para extraer iconos de archivos ejecutables de Windows.
 
 **e. (Opcional) Instalar desde el repositorio de WineHQ:**
 Para obtener una versión más reciente de Wine.
@@ -159,6 +287,8 @@ apt install --install-recommends winehq-stable
 wine --version
 # Configura Wine por primera vez
 winecfg
+# configura Q4wine por primera vez
+q4wine
 # Prueba una aplicación simple
 wine notepad
 ```
@@ -180,8 +310,8 @@ Asegúrate de que el nombre de usuario coincida con el del host.
 
 ```bash
 # Estando dentro del chroot
-adduser tu_usuario
-usermod -aG sudo tu_usuario  # Añadir al grupo sudo para permisos
+adduser <tu_usuario>
+usermod -aG sudo <tu_usuario>  # Añadir al grupo sudo para permisos
 ```
 
 **2. Inicializar Wine como usuario:**
@@ -189,10 +319,10 @@ Sal del chroot (`exit`) y vuelve a entrar como el usuario recién creado para ge
 
 ```bash
 # Desde el host
-sudo schroot -c debian-amd64 --user=tu_usuario -- winecfg
+sudo schroot -c debian-amd64 --user=<tu_usuario> -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" XDG_RUNTIME_DIR="$RUNTIME_DIR" winecfg
 ```
 
-Esto creará el prefijo en `/home/tu_usuario/.wine` dentro del chroot.
+Esto creará el prefijo en `/home/<tu_usuario>/.wine` dentro del chroot.
 
 ### B. Instalación Global (Modo Root)
 
@@ -203,61 +333,210 @@ Menos recomendado. Wine se ejecuta como `root` y el prefijo se almacena en `/roo
 sudo schroot -c debian-amd64 -- winecfg
 ```
 
-## Integración con el Escritorio
+## Instalar instalar emulador de terminal mejorado para wine (opcional)
 
-### 1. Configurar `sudoers` para Ejecución sin Contraseña
-
-Para que los accesos directos del menú no pidan contraseña al usar `schroot`, añade una regla a `sudoers`.
-
-**Ejecuta `sudo visudo` en el host** y agrega la siguiente línea, reemplazando `<tu_usuario>` con tu nombre de usuario:
-
-```text
-<tu_usuario> ALL=(ALL) NOPASSWD: /usr/bin/schroot
-```
-
-### 2. Crear Accesos Directos
-
-El script `wine-chroot` (o el script manual `make_wine_chroot_desktop.py`) puede generar archivos `.desktop` para tus aplicaciones. Estos archivos ejecutan la aplicación de Windows a través del chroot.
-
-**Ejemplo de uso del script:**
+Aunque wine puede funcionar con `xterm`, es recomendable instalar un emulador de terminal más avanzado como `gnome-terminal` o `konsole` para una mejor experiencia.
 
 ```bash
-wine-chroot desktop \
-  --exe "/srv/debian-amd64/home/<tu_usuario>/.wine/drive_c/Program Files/MiApp/app.exe" \
-  --name "Mi Aplicación (Wine)"
+# Dentro del chroot
+sudo apt install -y gnome-terminal
+# o
+sudo apt install -y konsole
+# o
+sudo apt install -y lxterminal
 ```
 
-Esto creará un lanzador en el menú de aplicaciones de tu escritorio, donde `<tu_usuario>` es tu nombre de usuario en el host.
+### configurar Q4Wine - cambiar terminal predeterminado
 
-### 3. Script Opcional de Ejecución Manual (`winegui`)
+a) Vuelve a abrir q4wine usando el script `winegui`:
 
-Si prefieres lanzar aplicaciones desde la terminal, puedes crear un script auxiliar.
+  ```bash
+  winegui q4wine
+  ```
 
-Crea el archivo `~/winegui.sh`:
+  **Nota sobre errores de QStandardPaths:** El script `winegui` ya configura automáticamente `XDG_RUNTIME_DIR`, por lo que no deberías experimentar errores como "QStandardPaths: error creating runtime directory '/run/user/1000'". Si aún así experimentas problemas, verifica que:
+
+- El script `winegui` esté instalado correctamente en `/usr/local/bin/winegui`
+- Tengas permisos de escritura en `/srv/debian-amd64/tmp/` o configurado sudoers correctamente
+
+b) Ve a **Editar** > **Configuración** (o "Edit > Options" si está en inglés).
+
+En la pestaña **Programas** o **Paths** (según el idioma), cambiar la ruta del terminal y los argumentos de la consola:
+
+| Terminal       | Ruta típica             | Parámetros |
+| -------------- | ----------------------- | :--------: |
+| xterm          | /usr/bin/xterm          |   -e %s    |
+| gnome-terminal | /usr/bin/gnome-terminal |   -- %s    |
+| konsole        | /usr/bin/konsole        |   -e %s    |
+| mate-terminal  | /usr/bin/mate-terminal  |   -e %s    |
+
+**Ejemplo:** si hubiera instalado *gnome-terminal*, debería cambiar en campo **Console App** de `/usr/bin/xterm` a `/usr/bin/gnome-terminal` y en **Console Args** de `-e %s` a `-- %s`.
+
+Guarda los cambios y continúa.
+
+## Integración con el Escritorio
+
+### 1. Crear script de integración X11 con el host
+
+El proyecto incluye un script mejorado `winegui.sh` en `src/winegui.sh` que maneja automáticamente:
+
+- Integración con X11 (DISPLAY, XAUTHORITY)
+- Configuración de XDG_RUNTIME_DIR para aplicaciones Qt/KDE
+- Creación automática de directorios runtime con permisos correctos
+
+**Instalación del script:**
+
+```bash
+# Copiar el script del proyecto
+sudo cp src/winegui.sh /usr/local/bin/winegui
+sudo chmod +x /usr/local/bin/winegui
+```
+
+**Contenido del script:**
 
 ```bash
 #!/usr/bin/env bash
-# Script para ejecutar comandos de Wine dentro del chroot como tu usuario
-CHROOT_NAME="debian-amd64"
-CHROOT_USER="$(whoami)"
+# Script para ejecutar comandos de Wine dentro del chroot
 
-# Ejecuta el comando en el chroot
-sudo schroot -c "$CHROOT_NAME" --user="$CHROOT_USER" -- wine "$@"
-#sudo schroot -c debian-amd64 --user="gatuno" -- wine "$@"
-```
+# Nombre default del chroot
+CHROOT_NAME="${CHROOT_NAME:-debian-amd64}"
+# Ruta default del chroot
+CHROOT_PATH="${CHROOT_PATH:-/srv/$CHROOT_NAME}"
+# Usuario actual
+USER="${USER:-$(whoami)}"
+# DISPLAY / XAUTHORITY desde el host
+DISPLAY_VAR="${DISPLAY:-:0}"
+XAUTH_VAR="${XAUTHORITY:-$HOME/.Xauthority}"
+# Directorio de runtime para aplicaciones Qt/KDE
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$UID}"
 
-Dale permisos y muévelo a una ruta accesible:
+# Crear directorio de runtime dentro del chroot si no existe
+if [ ! -d "$CHROOT_PATH$RUNTIME_DIR" ]; then
+    mkdir -p "$CHROOT_PATH$RUNTIME_DIR" 2>/dev/null || \
+        sudo mkdir -p "$CHROOT_PATH$RUNTIME_DIR"
+    chmod 700 "$CHROOT_PATH$RUNTIME_DIR" 2>/dev/null || \
+        sudo chmod 700 "$CHROOT_PATH$RUNTIME_DIR"
+    chown "$(id -u):$(id -g)" "$CHROOT_PATH$RUNTIME_DIR" 2>/dev/null || \
+        sudo chown "$(id -u):$(id -g)" "$CHROOT_PATH$RUNTIME_DIR"
+fi
 
-```bash
-chmod +x ~/winegui.sh
-sudo mv ~/winegui.sh /usr/local/bin/winegui
+# Permitir conexiones locales al servidor X
+xhost +SI:localuser:"$USER" >/dev/null 2>&1 || xhost +local: >/dev/null 2>&1 || true
+
+# Ejecuta el comando en el chroot con todas las variables de entorno necesarias
+schroot -c "$CHROOT_NAME" --user=$USER -- env \
+    DISPLAY="$DISPLAY_VAR" \
+    XAUTHORITY="$XAUTH_VAR" \
+    XDG_RUNTIME_DIR="$RUNTIME_DIR" \
+    WINEPREFIX="/home/$USER/.wine" \
+    wine "$@"
 ```
 
 **Ejemplo de uso:**
 
 ```bash
+# Ejecutar aplicaciones Windows
 winegui "C:\Program Files\Notepad++\notepad++.exe"
+
+# Ejecutar q4wine (gestor gráfico de Wine)
+winegui q4wine
+
+# Ejecutar winecfg
+winegui winecfg
 ```
+
+**Características del script mejorado:**
+
+- ✅ Configura automáticamente `XDG_RUNTIME_DIR` para evitar errores de QStandardPaths en aplicaciones Qt
+- ✅ Crea el directorio runtime con permisos correctos (700) y ownership adecuado
+- ✅ Intenta operaciones sin privilegios antes de usar `sudo`
+- ✅ Soporta personalización mediante variables de entorno (`CHROOT_NAME`, `CHROOT_PATH`)
+
+### 2. Configurar `sudoers` para Ejecución sin Contraseña
+
+Para que los accesos directos del menú no pidan contraseña al usar `schroot`, añade una regla a `sudoers`.
+
+**Ejecuta `sudo visudo` en el host** y agrega las siguientes líneas, reemplazando `<tu_usuario>` con tu nombre de usuario:
+
+```sudoers
+# para no usar sudo al llamar integración con escritorio
+<tu_usuario> ALL=(ALL) NOPASSWD: /usr/local/bin/winegui
+# no pedir contraseña al usar `schroot` para entrar al shell del ambiente
+<tu_usuario> ALL=(ALL) NOPASSWD: /usr/bin/schroot
+```
+
+- La primera línea permite ejecutar el script `winegui` sin contraseña, que es el que se usará en los accesos directos, y está definido en sección [script de integración X11 con el host](#1-crear-script-de-integración-x11-con-el-host).
+- La segunda línea permite usar `schroot` sin contraseña, útil para abrir una terminal dentro del chroot si es necesario.
+
+### 3. Crear Accesos Directos
+
+#### a. Crear un archivo `.desktop` para una aplicación Windows
+
+Se puede crear un archivo `.desktop` para cada aplicación Windows que desees ejecutar desde el menú de aplicaciones de tu escritorio. Aquí tienes un ejemplo de cómo crear un acceso directo para Notepad++:
+
+Crea un archivo llamado `notepadpp.desktop` en `~/.local/share/applications/` con el contenido siguiente:
+
+- Notar que debes ajustar las rutas, tanto del **ejecutable**, como del **icono** según tu instalación**:
+  - Nota el uso de dobles barras invertidas (`\\`) en la ruta de Windows.
+  - El icono lo puedes extraer del instalador de la aplicación como se muestra en [extraer iconos](#b-extraer-iconos-de-aplicaciones-windows), o usar uno genérico.
+
+```ini
+[Desktop Entry]
+Name=Notepad++
+Comment=Editor de texto Notepad++ ejecutado dentro del entorno Wine amd64 (schroot)
+Exec=/usr/local/bin/winegui "C:\\Program Files\\Notepad++\\Notepad++.exe"
+Icon=~/.local/share/icons/Notepad++.png
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Utility;TextEditor;Wine;WindowsApps;
+StartupWMClass=notepad++.exe
+```
+
+donde:
+
+- `Name`: El nombre que aparecerá en el menú.
+- `Comment`: Una breve descripción de la aplicación.
+- `Exec`: La ruta al script `winegui` seguido del camino al ejecutable de la aplicación Windows.
+- `Icon`: La ruta al icono que deseas usar para la aplicación. En este caso, se asume que has colocado un icono en `~/.local/share/icons/Notepad++.png`.
+- `Terminal`: `false` indica que no se debe abrir una terminal al ejecutar la aplicación.
+- `Type`: El tipo de entrada, en este caso una aplicación.
+- `Categories`: Categorías para organizar la aplicación en el menú.
+- `StartupNotify`: `true` permite que el sistema muestre notificaciones de inicio de la aplicación.
+- `StartupWMClass`: El nombre de la clase de ventana para ayudar al gestor de ventanas a identificar la aplicación. El standard suele ser el nombre del ejecutable.
+
+Esto creará un lanzador en el menú de aplicaciones de tu escritorio, donde `<tu_usuario>` es tu nombre de usuario en el host.
+
+#### b. Extraer iconos de aplicaciones Windows
+
+[ ] **TODO:** corregir instrucciones para extraer iconos desde instaladores `.exe` o `.ico`
+
+Ejecutando el instalador de la aplicación Windows dentro del chroot, puedes extraer los iconos usando herramientas como `wrestool` o `icotool` del paquete `icoutils` ya instalado dentro del ambiente chroot:
+
+- Si se instala Notepad++ globalmente (en 'root'), el prefijo estará en `/root/.wine`.
+
+  ```bash
+
+  schroot -c debian-amd64 -- wrestool -x -t14 "/srv/debian-amd64/root/.wine/drive_c/Program Files/Notepad++/Notepad++.exe" -o /home/<tu-usuario>/Notepad++.ico
+  sudo schroot -c debian-amd64 -- sudo icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
+  ```
+
+- Si se instala como usuario, el prefijo estará en `/home/<tu-usuario>/.wine`.
+
+  ```bash
+  schroot -c debian-amd64 --user=<tu-usuario> -- wrestool -x -t14 "/srv/debian-amd64/home/<tu-usuario>/.wine/drive_c/Program Files/Notepad++/Notepad++.exe" -o /home/<tu-usuario>/Notepad++.ico
+  sudo schroot -c debian-amd64 --user=<tu-usuario> -- icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
+  ```
+
+#### c. Refrescar el menú Cinnamon
+
+Ejecuta:
+
+```bash
+update-desktop-database ~/.local/share/applications
+```
+
+o simplemente cierra y abre sesión.
 
 ## Resumen del Resultado
 
