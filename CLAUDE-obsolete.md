@@ -414,36 +414,6 @@ def install_wine(chroot_path: Path, verbose: bool = False) -> bool:
   console.print("  sudo apt install debootstrap schroot")
   ```
 
-### Privilege Escalation: sudo vs pkexec
-
-**Decision: Use sudo by default**
-
-The tool uses `sudo` for schroot access by default instead of `pkexec` for the following reasons:
-
-1. **Reliability with .desktop launchers**: `sudo` works consistently when launching applications from desktop menu entries, while `pkexec` can be erratic with GUI applications.
-
-2. **Environment preservation**: `sudo` better preserves environment variables needed for X11 forwarding (DISPLAY, XAUTHORITY).
-
-3. **Configuration simplicity**: A single sudoers rule (`/etc/sudoers.d/schroot`) provides seamless password-free launching.
-
-4. **Historical evidence**: The original bash implementation used a wrapper script that relied on sudo-like behavior, which worked reliably.
-
-**When to use pkexec:**
-
-- Interactive CLI usage where graphical authentication dialogs are preferred
-- Systems with strict security policies against sudoers rules
-- User explicitly configures `use_pkexec = true` in wine-chroot.toml
-
-**Implementation:**
-
-```python
-# Default configuration (config.py)
-"execution": {
-    "use_pkexec": False,  # sudo is more reliable
-    ...
-}
-```
-
 ## Implementation Phases
 
 ### Phase 1: Core Restructuring ✓
