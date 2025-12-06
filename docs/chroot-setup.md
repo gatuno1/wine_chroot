@@ -348,15 +348,15 @@ sudo apt install -y lxterminal
 
 ### configurar Q4Wine - cambiar terminal predeterminado
 
-a) Vuelve a abrir q4wine usando el script `winegui`:
+a) Vuelve a abrir q4wine usando el script `runchroot`:
 
   ```bash
-  winegui q4wine
+  runchroot q4wine
   ```
 
-  **Nota sobre errores de QStandardPaths:** El script `winegui` ya configura automáticamente `XDG_RUNTIME_DIR`, por lo que no deberías experimentar errores como "QStandardPaths: error creating runtime directory '/run/user/1000'". Si aún así experimentas problemas, verifica que:
+  **Nota sobre errores de QStandardPaths:** El script `runchroot` ya configura automáticamente `XDG_RUNTIME_DIR`, por lo que no deberías experimentar errores como "QStandardPaths: error creating runtime directory '/run/user/1000'". Si aún así experimentas problemas, verifica que:
 
-- El script `winegui` esté instalado correctamente en `/usr/local/bin/winegui`
+- El script `runchroot` esté instalado correctamente en `/usr/local/bin/runchroot`
 - Tengas permisos de escritura en `/srv/debian-amd64/tmp/` o configurado sudoers correctamente
 
 b) Ve a **Editar** > **Configuración** (o "Edit > Options" si está en inglés).
@@ -464,12 +464,12 @@ Para que los accesos directos del menú no pidan contraseña al usar `schroot`, 
 
 ```sudoers
 # para no usar sudo al llamar integración con escritorio
-<tu_usuario> ALL=(ALL) NOPASSWD: /usr/local/bin/winegui
+<tu_usuario> ALL=(ALL) NOPASSWD: /usr/local/bin/runchroot
 # no pedir contraseña al usar `schroot` para entrar al shell del ambiente
 <tu_usuario> ALL=(ALL) NOPASSWD: /usr/bin/schroot
 ```
 
-- La primera línea permite ejecutar el script `winegui` sin contraseña, que es el que se usará en los accesos directos, y está definido en sección [script de integración X11 con el host](#1-crear-script-de-integración-x11-con-el-host).
+- La primera línea permite ejecutar el script `runchroot` sin contraseña, que es el que se usará en los accesos directos, y está definido en sección [script de integración X11 con el host](#1-crear-script-de-integración-x11-con-el-host).
 - La segunda línea permite usar `schroot` sin contraseña, útil para abrir una terminal dentro del chroot si es necesario.
 
 ### 3. Crear Accesos Directos
@@ -488,7 +488,7 @@ Crea un archivo llamado `notepadpp.desktop` en `~/.local/share/applications/` co
 [Desktop Entry]
 Name=Notepad++
 Comment=Editor de texto Notepad++ ejecutado dentro del entorno Wine amd64 (schroot)
-Exec=/usr/local/bin/winegui "C:\\Program Files\\Notepad++\\Notepad++.exe"
+Exec=/usr/local/bin/runchroot "C:\\Program Files\\Notepad++\\Notepad++.exe"
 Icon=~/.local/share/icons/Notepad++.png
 Terminal=false
 Type=Application
@@ -501,7 +501,7 @@ donde:
 
 - `Name`: El nombre que aparecerá en el menú.
 - `Comment`: Una breve descripción de la aplicación.
-- `Exec`: La ruta al script `winegui` seguido del camino al ejecutable de la aplicación Windows.
+- `Exec`: La ruta al script `runchroot` seguido del camino al ejecutable de la aplicación Windows.
 - `Icon`: La ruta al icono que deseas usar para la aplicación. En este caso, se asume que has colocado un icono en `~/.local/share/icons/Notepad++.png`.
 - `Terminal`: `false` indica que no se debe abrir una terminal al ejecutar la aplicación.
 - `Type`: El tipo de entrada, en este caso una aplicación.
