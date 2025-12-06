@@ -318,11 +318,17 @@ usermod -aG sudo <tu_usuario>  # Añadir al grupo sudo para permisos
 Sal del chroot (`exit`) y vuelve a entrar como el usuario recién creado para generar su prefijo de Wine.
 
 ```bash
-# Desde el host
-sudo schroot -c debian-amd64 --user=<tu_usuario> -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" XDG_RUNTIME_DIR="$RUNTIME_DIR" winecfg
+# Desde el host, usando las variables de entorno necesarias
+sudo schroot -c debian-amd64 --user=<tu_usuario> -- env \
+  DISPLAY="$DISPLAY" \
+  XAUTHORITY="$XAUTHORITY" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u <tu_usuario>)" \
+  winecfg
 ```
 
 Esto creará el prefijo en `/home/<tu_usuario>/.wine` dentro del chroot.
+
+**Nota:** Más adelante instalaremos el script `runchroot` que simplificará este proceso manejando automáticamente todas estas variables de entorno.
 
 ### B. Instalación Global (Modo Root)
 
@@ -333,47 +339,6 @@ Menos recomendado. Wine se ejecuta como `root` y el prefijo se almacena en `/roo
 sudo schroot -c debian-amd64 -- winecfg
 ```
 
-## Instalar instalar emulador de terminal mejorado para wine (opcional)
-
-Aunque wine puede funcionar con `xterm`, es recomendable instalar un emulador de terminal más avanzado como `gnome-terminal` o `konsole` para una mejor experiencia.
-
-```bash
-# Dentro del chroot
-sudo apt install -y gnome-terminal
-# o
-sudo apt install -y konsole
-# o
-sudo apt install -y lxterminal
-```
-
-### configurar Q4Wine - cambiar terminal predeterminado
-
-a) Vuelve a abrir q4wine usando el script `runchroot`:
-
-  ```bash
-  runchroot q4wine
-  ```
-
-  **Nota sobre errores de QStandardPaths:** El script `runchroot` ya configura automáticamente `XDG_RUNTIME_DIR`, por lo que no deberías experimentar errores como "QStandardPaths: error creating runtime directory '/run/user/1000'". Si aún así experimentas problemas, verifica que:
-
-- El script `runchroot` esté instalado correctamente en `/usr/local/bin/runchroot`
-- Tengas permisos de escritura en `/srv/debian-amd64/tmp/` o configurado sudoers correctamente
-
-b) Ve a **Editar** > **Configuración** (o "Edit > Options" si está en inglés).
-
-En la pestaña **Programas** o **Paths** (según el idioma), cambiar la ruta del terminal y los argumentos de la consola:
-
-| Terminal       | Ruta típica             | Parámetros |
-| -------------- | ----------------------- | :--------: |
-| xterm          | /usr/bin/xterm          |   -e %s    |
-| gnome-terminal | /usr/bin/gnome-terminal |   -- %s    |
-| konsole        | /usr/bin/konsole        |   -e %s    |
-| mate-terminal  | /usr/bin/mate-terminal  |   -e %s    |
-
-**Ejemplo:** si hubiera instalado *gnome-terminal*, debería cambiar en campo **Console App** de `/usr/bin/xterm` a `/usr/bin/gnome-terminal` y en **Console Args** de `-e %s` a `-- %s`.
-
-Guarda los cambios y continúa.
-
 ## Integración con el Escritorio
 
 ### 1. Crear script de integración X11 con el host
@@ -383,14 +348,6 @@ El proyecto incluye un script mejorado `runchroot.sh` en `src/runchroot` que man
 - Integración con X11 (DISPLAY, XAUTHORITY)
 - Configuración de XDG_RUNTIME_DIR para aplicaciones Qt/KDE
 - Creación automática de directorios runtime con permisos correctos
-
-**Instalación del script:**
-
-```bash
-# Copiar el script del proyecto
-sudo cp src/runchroot.sh /usr/local/bin/runchroot
-sudo chmod +x /usr/local/bin/runchroot
-```
 
 **Contenido del script:**
 
@@ -436,7 +393,24 @@ schroot -c "$CHROOT_NAME" --user=$USER -- env \
     "$@"
 ```
 
-**Ejemplo de uso:**
+**Características del script:**
+
+- ✅ Configura automáticamente `XDG_RUNTIME_DIR` para evitar errores de QStandardPaths en aplicaciones Qt
+- ✅ Crea el directorio runtime con permisos correctos (700) y ownership adecuado
+- ✅ Intenta operaciones sin privilegios antes de usar `sudo`
+- ✅ Soporta personalización mediante variables de entorno (`CHROOT_NAME`, `CHROOT_PATH`)
+
+### 2. Instalar el script runchroot en el sistema
+
+Una vez que entiendas cómo funciona el script, instálalo en el sistema para usarlo desde cualquier lugar:
+
+```bash
+# Copiar el script del proyecto al sistema
+sudo cp src/runchroot.sh /usr/local/bin/runchroot
+sudo chmod +x /usr/local/bin/runchroot
+```
+
+Ahora puedes ejecutar aplicaciones Windows desde cualquier terminal:
 
 ```bash
 # Ejecutar aplicaciones Windows
@@ -449,14 +423,7 @@ runchroot q4wine
 runchroot winecfg
 ```
 
-**Características del script mejorado:**
-
-- ✅ Configura automáticamente `XDG_RUNTIME_DIR` para evitar errores de QStandardPaths en aplicaciones Qt
-- ✅ Crea el directorio runtime con permisos correctos (700) y ownership adecuado
-- ✅ Intenta operaciones sin privilegios antes de usar `sudo`
-- ✅ Soporta personalización mediante variables de entorno (`CHROOT_NAME`, `CHROOT_PATH`)
-
-### 2. Configurar `sudoers` para Ejecución sin Contraseña
+### 3. Configurar `sudoers` para Ejecución sin Contraseña (Opcional)
 
 Para que los accesos directos del menú no pidan contraseña al usar `schroot`, añade una regla a `sudoers`.
 
@@ -469,12 +436,59 @@ Para que los accesos directos del menú no pidan contraseña al usar `schroot`, 
 <tu_usuario> ALL=(ALL) NOPASSWD: /usr/bin/schroot
 ```
 
-- La primera línea permite ejecutar el script `runchroot` sin contraseña, que es el que se usará en los accesos directos, y está definido en sección [script de integración X11 con el host](#1-crear-script-de-integración-x11-con-el-host).
+- La primera línea permite ejecutar el script `runchroot` sin contraseña, que es el que se usará en los accesos directos.
 - La segunda línea permite usar `schroot` sin contraseña, útil para abrir una terminal dentro del chroot si es necesario.
 
-### 3. Crear Accesos Directos
+## Configuración Adicional (Opcional)
 
-#### a. Crear un archivo `.desktop` para una aplicación Windows
+### Instalar emulador de terminal mejorado para Wine
+
+Aunque Wine puede funcionar con `xterm`, es recomendable instalar un emulador de terminal más avanzado como `gnome-terminal` o `konsole` para una mejor experiencia.
+
+```bash
+# Dentro del chroot
+sudo schroot -c debian-amd64
+apt install -y gnome-terminal
+# o
+apt install -y konsole
+# o
+apt install -y lxterminal
+exit
+```
+
+### Configurar Q4Wine - cambiar terminal predeterminado
+
+Una vez instalado el script `runchroot` y un terminal mejorado, puedes configurar Q4Wine:
+
+a) Abre Q4Wine usando el script `runchroot`:
+
+  ```bash
+  runchroot q4wine
+  ```
+
+  **Nota sobre errores de QStandardPaths:** El script `runchroot` ya configura automáticamente `XDG_RUNTIME_DIR`, por lo que no deberías experimentar errores como "QStandardPaths: error creating runtime directory '/run/user/1000'". Si aún así experimentas problemas, verifica que:
+
+- El script `runchroot` esté instalado correctamente en `/usr/local/bin/runchroot`
+- Tengas permisos de escritura en `/srv/debian-amd64/tmp/` o configurado sudoers correctamente
+
+b) Ve a **Editar** > **Configuración** (o "Edit > Options" si está en inglés).
+
+En la pestaña **Programas** o **Paths** (según el idioma), cambiar la ruta del terminal y los argumentos de la consola:
+
+| Terminal       | Ruta típica             | Parámetros |
+| -------------- | ----------------------- | :--------: |
+| xterm          | /usr/bin/xterm          |   -e %s    |
+| gnome-terminal | /usr/bin/gnome-terminal |   -- %s    |
+| konsole        | /usr/bin/konsole        |   -e %s    |
+| mate-terminal  | /usr/bin/mate-terminal  |   -e %s    |
+
+**Ejemplo:** si hubiera instalado *gnome-terminal*, debería cambiar en campo **Console App** de `/usr/bin/xterm` a `/usr/bin/gnome-terminal` y en **Console Args** de `-e %s` a `-- %s`.
+
+Guarda los cambios y continúa.
+
+## Crear Accesos Directos del Escritorio
+
+### a. Crear un archivo `.desktop` para una aplicación Windows
 
 Se puede crear un archivo `.desktop` para cada aplicación Windows que desees ejecutar desde el menú de aplicaciones de tu escritorio. Aquí tienes un ejemplo de cómo crear un acceso directo para Notepad++:
 
@@ -511,7 +525,7 @@ donde:
 
 Esto creará un lanzador en el menú de aplicaciones de tu escritorio, donde `<tu_usuario>` es tu nombre de usuario en el host.
 
-#### b. Extraer iconos de aplicaciones Windows
+### b. Extraer iconos de aplicaciones Windows
 
 [ ] **TODO:** corregir instrucciones para extraer iconos desde instaladores `.exe` o `.ico`
 
@@ -532,7 +546,7 @@ Ejecutando el instalador de la aplicación Windows dentro del chroot, puedes ext
   sudo schroot -c debian-amd64 --user=<tu-usuario> -- icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
   ```
 
-#### c. Refrescar el menú Cinnamon
+### c. Refrescar el menú de aplicaciones
 
 Ejecuta:
 

@@ -50,7 +50,7 @@ wine_chroot/
 ├── src/
 │   └── runchroot.sh          # Main launcher script
 ├── docs/
-│   └── chroot-setup.md       # Complete setup guide (Spanish)
+│   └── chroot-setup_es.md    # Complete setup guide (Spanish)
 ├── pyproject.toml            # Project metadata
 ├── LICENSE                   # GPL-3.0-or-later
 └── CLAUDE.md                 # This file
@@ -123,7 +123,7 @@ runchroot q4wine
 
 ## Setup Process
 
-**Complete setup instructions are in `docs/chroot-setup.md` (Spanish).**
+**Complete setup instructions are in `docs/chroot-setup_es.md` (Spanish).**
 
 ### Quick Reference
 
@@ -144,7 +144,7 @@ runchroot q4wine
 
    - Create `/etc/schroot/chroot.d/debian-amd64.conf`
    - Edit `/etc/schroot/default/fstab` for bind-mounts
-   - See `docs/chroot-setup.md` for detailed configuration
+   - See `docs/chroot-setup_es.md` for detailed configuration
 
 4. **Install Wine in chroot:**
 
@@ -375,7 +375,7 @@ See LICENSE file for full text.
 
 ## References
 
-- Main documentation: `docs/chroot-setup.md` (Spanish)
+- Main documentation: `docs/chroot-setup_es.md` (Spanish)
 - Wine on Debian: <https://wiki.debian.org/Wine>
 - WineHQ Guide: <https://gitlab.winehq.org/wine/wine/-/wikis/Debian-Ubuntu>
 - schroot manual: `man schroot`
