@@ -15,16 +15,15 @@ TARGET_HOME=$(getent passwd "$USER" | cut -d: -f6)
 DISPLAY_VAR="${DISPLAY:-:0}"
 XAUTH_VAR="${XAUTHORITY:-$TARGET_HOME/.Xauthority}"
 # Directorio de runtime para aplicaciones Qt/KDE
-RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$TARGET_UID}"
+# Usar /tmp en lugar de /run porque schroot crea un tmpfs nuevo en /run
+# en lugar de bind-montar el /run del host, causando problemas de ownership.
+# /tmp funciona correctamente preservando permisos y ownership del host.
+RUNTIME_DIR="/tmp/runtime-$USER"
 
-# Crear directorio de runtime dentro del chroot si no existe
-if [ ! -d "$CHROOT_PATH$RUNTIME_DIR" ]; then
-    mkdir -p "$CHROOT_PATH$RUNTIME_DIR" 2>/dev/null || \
-        sudo mkdir -p "$CHROOT_PATH$RUNTIME_DIR"
-    chmod 700 "$CHROOT_PATH$RUNTIME_DIR" 2>/dev/null || \
-        sudo chmod 700 "$CHROOT_PATH$RUNTIME_DIR"
-    chown "$TARGET_UID:$TARGET_GID" "$CHROOT_PATH$RUNTIME_DIR" 2>/dev/null || \
-        sudo chown "$TARGET_UID:$TARGET_GID" "$CHROOT_PATH$RUNTIME_DIR"
+# Crear directorio en el HOST si no existe (será visible automáticamente en chroot)
+if [ ! -d "$RUNTIME_DIR" ]; then
+    mkdir -p "$RUNTIME_DIR"
+    chmod 700 "$RUNTIME_DIR"
 fi
 
 # Permitir conexiones locales al servidor X

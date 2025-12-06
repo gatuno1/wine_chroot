@@ -64,9 +64,9 @@ wine_chroot/
 
 - Derives user-specific variables (UID, GID, HOME) from `$USER` parameter, not from the executing process
 - Configures X11 integration (DISPLAY, XAUTHORITY)
-- Sets up XDG_RUNTIME_DIR for Qt/KDE applications
-- Creates runtime directories with correct permissions
-- Handles privilege escalation (sudo) when needed
+- Sets up XDG_RUNTIME_DIR to `/tmp/runtime-$USER` for Qt/KDE applications
+- Creates runtime directory in `/tmp` (avoiding ownership issues with `/run/user/$UID` in schroot)
+- Works correctly with schroot's bind-mount configuration
 
 **Critical Implementation Detail:**
 
@@ -275,16 +275,18 @@ The script handles environment setup, but executable paths must be provided in W
 
 ### Runtime Directory Errors (Qt/KDE apps)
 
-**Symptom:** `QStandardPaths: error creating runtime directory '/run/user/1000'`
+**Symptom:** `QStandardPaths: runtime directory '/run/user/1000' is not owned by UID 1000`
 
-**Cause:** Missing or incorrectly owned XDG_RUNTIME_DIR inside chroot
+**Cause:** schroot creates a new tmpfs for `/run` instead of bind-mounting it from the host, causing ownership mismatches
 
-**Solution:** The `runchroot.sh` script automatically creates and fixes permissions. Verify:
+**Solution:** The `runchroot.sh` script uses `/tmp/runtime-$USER` instead of `/run/user/$UID`, avoiding this issue entirely. Verify:
 
 ```bash
-ls -ld /srv/debian-amd64/run/user/$(id -u)
+ls -ld /tmp/runtime-$(whoami)
 # Should show: drwx------ owned by your user
 ```
+
+This directory is automatically created by `runchroot.sh` and is accessible from both host and chroot with correct permissions.
 
 ### Wine Prefix Issues
 
