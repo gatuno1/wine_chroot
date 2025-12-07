@@ -356,23 +356,18 @@ sudo schroot -c alt-debian-amd64 -- winecfg
 
 ### 1. Crear script de integración X11 con el host (Versión Simplificada)
 
-**⚡ Versión 2 - Script simplificado** aprovechando `preserve-environment=true`:
-
-- ✅ DISPLAY y XAUTHORITY se heredan automáticamente del host (no necesitan configuración manual)
-- ✅ Solo configura XDG_RUNTIME_DIR y WINEPREFIX
-- ✅ Script más corto y fácil de mantener
-
 **Contenido del script (runchroot-v2.sh):**
 
 ```bash
 #!/usr/bin/env bash
 # Script simplificado para ejecutar comandos dentro del chroot
-# Aprovecha preserve-environment=true en schroot
 
 # Nombre default del chroot
 CHROOT_NAME="${CHROOT_NAME:-alt-debian-amd64}"
+
 # Usuario objetivo (el que ejecutará Wine)
 USER="${USER:-$(whoami)}"
+
 # Directorio de runtime para aplicaciones Qt/KDE
 RUNTIME_DIR="/tmp/runtime-$USER"
 
@@ -393,22 +388,6 @@ schroot -c "$CHROOT_NAME" --user=$USER -- env \
     "$@"
 ```
 
-**Comparación con versión 1:**
-
-| Aspecto | Versión 1 (preserve=false) | Versión 2 (preserve=true) |
-|---------|---------------------------|---------------------------|
-| Líneas de código | ~39 líneas | ~25 líneas (-36%) |
-| Variables configuradas manualmente | DISPLAY, XAUTHORITY, XDG_RUNTIME_DIR | Solo XDG_RUNTIME_DIR |
-| Detección de UID/GID/HOME | Necesaria | No necesaria |
-| Complejidad | Media | Baja |
-
-**Características del script v2:**
-
-- ✅ Hereda DISPLAY y XAUTHORITY automáticamente del host
-- ✅ Configura solo XDG_RUNTIME_DIR (no heredable) y WINEPREFIX
-- ✅ Código más simple y mantenible
-- ✅ Usa `/tmp/runtime-$USER` como directorio runtime (solución probada y confiable)
-
 ### 2. Instalar el script runchroot-v2 en el sistema
 
 Crea el script y hazlo ejecutable:
@@ -418,12 +397,13 @@ Crea el script y hazlo ejecutable:
 cat > /tmp/runchroot-v2.sh << 'EOF'
 #!/usr/bin/env bash
 # Script simplificado para ejecutar comandos dentro del chroot
-# Aprovecha preserve-environment=true en schroot
 
 # Nombre default del chroot
 CHROOT_NAME="${CHROOT_NAME:-alt-debian-amd64}"
+
 # Usuario objetivo (el que ejecutará Wine)
 USER="${USER:-$(whoami)}"
+
 # Directorio de runtime para aplicaciones Qt/KDE
 RUNTIME_DIR="/tmp/runtime-$USER"
 
