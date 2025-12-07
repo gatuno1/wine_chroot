@@ -48,25 +48,59 @@ Wine Chroot enables running Windows amd64 applications on ARM64 Linux systems us
 ```asciiart
 wine_chroot/
 ├── src/
-│   └── runchroot.sh          # Main launcher script
+│   ├── runchroot.sh          # Main launcher script (v1)
+│   └── runchroot-v2.sh       # Simplified launcher script (v2) ⭐ RECOMMENDED
 ├── docs/
-│   └── chroot-setup_es.md    # Complete setup guide (Spanish)
+│   ├── chroot-setup_es.md    # Complete setup guide (Spanish) - v1
+│   ├── chroot-setup-v2_es.md # Simplified setup guide (Spanish) - v2 ⭐
+│   └── COMPARISON-v1-vs-v2.md # Detailed comparison
 ├── pyproject.toml            # Project metadata
 ├── LICENSE                   # GPL-3.0-or-later
 └── CLAUDE.md                 # This file
 ```
 
-## Core Script: runchroot.sh
+## Core Scripts
 
-**Purpose**: Execute commands inside the chroot with proper environment setup.
+### ⭐ runchroot-v2.sh (RECOMMENDED)
+
+**Version 2 - Simplified approach using `preserve-environment=true`**
+
+**Purpose**: Execute commands inside the chroot with automatic environment inheritance.
 
 **Key Features:**
 
+- **40% less code** than v1 (12 vs 20 lines of executable code)
+- DISPLAY and XAUTHORITY **inherited automatically** from host (no manual configuration)
+- Only configures XDG_RUNTIME_DIR and WINEPREFIX
+- Simpler and more maintainable
+- Requires `preserve-environment=true` in schroot config
+
+**When to use v2:**
+- ✅ Personal use / development environments
+- ✅ When simplicity is a priority
+- ✅ Single-user desktop setups
+- ✅ You trust the host environment
+
+### runchroot.sh (v1)
+
+**Version 1 - Full control approach using `preserve-environment=false`**
+
+**Purpose**: Execute commands inside the chroot with manual environment configuration.
+
+**Key Features:**
+
+- **Full control** over all environment variables
 - Derives user-specific variables (UID, GID, HOME) from `$USER` parameter, not from the executing process
-- Configures X11 integration (DISPLAY, XAUTHORITY)
+- Manually configures X11 integration (DISPLAY, XAUTHORITY)
 - Sets up XDG_RUNTIME_DIR to `/tmp/runtime-$USER` for Qt/KDE applications
 - Creates runtime directory in `/tmp` (avoiding ownership issues with `/run/user/$UID` in schroot)
-- Works correctly with schroot's bind-mount configuration
+- Works with `preserve-environment=false` (default schroot behavior)
+
+**When to use v1:**
+- ⚙️ Multi-user environments with strict security requirements
+- ⚙️ When you need full control over what gets exposed to the chroot
+- ⚙️ Production environments where predictability is critical
+- ⚙️ When you don't trust the host environment
 
 **Critical Implementation Detail:**
 

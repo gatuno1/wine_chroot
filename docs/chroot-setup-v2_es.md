@@ -1,6 +1,12 @@
-# Configuración de un Entorno Chroot con Wine para ARM64
+# Configuración de un Entorno Chroot con Wine para ARM64 - Versión 2 (Simplificada)
 
 Este documento describe cómo ejecutar aplicaciones Windows x86/x64 en un sistema Debian Trixie ARM64 (por ejemplo, Orange Pi 5 Plus) usando un entorno chroot amd64 con Wine x64/x86 completo.
+
+**⚡ Versión 2 - Cambios principales:**
+- ✅ Usa `preserve-environment=true` en schroot para heredar variables del host automáticamente
+- ✅ Script `runchroot` más simple (solo configura XDG_RUNTIME_DIR y WINEPREFIX)
+- ✅ Comandos gráficos de Wine funcionan directamente desde dentro del chroot (opcional)
+- ✅ Nombre del chroot: `alt-alt-debian-amd64` (para testing sin afectar configuración existente)
 
 El objetivo es reemplazar la necesidad de emuladores parciales (como Box64 o FEX-Emu) mediante un entorno chroot real con soporte multi-arquitectura i386+amd64, ejecutado sobre QEMU user-static.
 
@@ -36,37 +42,37 @@ donde los paquetes son:
 Crea el directorio para el chroot y descarga el sistema base de Debian:
 
 ```bash
-sudo debootstrap --arch=amd64 trixie /srv/debian-amd64 http://deb.debian.org/debian
+sudo debootstrap --arch=amd64 trixie /srv/alt-alt-debian-amd64 http://deb.debian.org/debian
 ```
 
-donde `debian-amd64` es el nombre elegido para el entorno chroot, y:
+donde `alt-alt-debian-amd64` es el nombre elegido para el entorno chroot (v2 de testing), y:
 
 - `--arch=amd64`: Especifica la arquitectura del chroot.
 - `trixie`: La versión de Debian a instalar.
-- `/srv/debian-amd64`: El directorio donde se alojará el chroot.
+- `/srv/alt-alt-debian-amd64`: El directorio donde se alojará el chroot.
 
 ### 3. Configurar `schroot`
 
-Crea el archivo de configuración para tu chroot en `/etc/schroot/chroot.d/debian-amd64.conf`:
+Crea el archivo de configuración para tu chroot en `/etc/schroot/chroot.d/alt-alt-debian-amd64.conf`:
 
 ```ini
-[debian-amd64]
-description=Debian amd64 chroot virtual environment
-directory=/srv/debian-amd64
+[alt-alt-debian-amd64]
+description=Debian amd64 chroot virtual environment (v2 - simplified)
+directory=/srv/alt-alt-debian-amd64
 type=directory
 # Usuarios permitidos
 users=<tu_usuario>
 groups=<tu_usuario>
 root-users=<tu_usuario>
 personality=linux
-# No heredar variables del host
-preserve-environment=false
+# ⚡ CLAVE: Heredar variables del host (DISPLAY, XAUTHORITY, etc.)
+preserve-environment=true
 ```
 
 - Reemplaza `<tu_usuario>` con tu nombre de usuario en el sistema host arm64.
 - `directory` apunta a la ruta del sistema chroot creado, usando el nombre del chroot.
 - `personality=linux`: Asegura la compatibilidad del entorno.
-- `preserve-environment=true`: Propaga variables de entorno como `DISPLAY` y `HOME` del host al chroot.
+- **`preserve-environment=true`**: Propaga variables de entorno como `DISPLAY`, `XAUTHORITY`, `LANG` del host al chroot automáticamente.
 
 ### 4. Configurar `fstab` del Chroot
 
@@ -100,7 +106,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
 
   ```bash
   $ schroot --list
-  chroot:debian-amd64
+  chroot:alt-debian-amd64
   ```
 
 - **Verificar las arquitecturas**
@@ -112,7 +118,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
   $ uname -m
   aarch64
   # arquitectura dentro del ambiente chroot 
-  $ sudo schroot -c debian-amd64 -- uname -m
+  $ sudo schroot -c alt-debian-amd64 -- uname -m
   x86_64
   ```
 
@@ -123,14 +129,14 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
    Inicia una sesión interactiva en el chroot:
 
    ```bash
-   sudo schroot -c debian-amd64
+   sudo schroot -c alt-debian-amd64
    ```
 
    Luego, en otra terminal del host, lista las sesiones activas:
 
    ```bash
    $ schroot --list --all-sessions
-   session:debian-amd64-cc4874c1-892f-4627-a9c7-5b9956bd7de7
+   session:alt-debian-amd64-cc4874c1-892f-4627-a9c7-5b9956bd7de7
    ```
 
 #### ¿Como 'reiniciarlo' si hay problemas?
@@ -156,7 +162,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
   Esto ayuda muchísimo cuando Wine dejó procesos colgados.
 
   ```bash
-  sudo schroot -c debian-amd64 -- pkill -9 wine
+  sudo schroot -c alt-debian-amd64 -- pkill -9 wine
   ```
 
 - **Limpiar lockfiles**
@@ -182,7 +188,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
   Si quieres asegurarte:
 
   ```bash
-  sudo schroot -c debian-amd64 -- true
+  sudo schroot -c alt-debian-amd64 -- true
   ```
 
   Si entra sin errores, la configuración ya está aplicada.
@@ -191,7 +197,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
 
   ```bash
   sudo schroot --end-session --all-sessions
-  sudo umount -R /srv/debian-amd64
+  sudo umount -R /srv/alt-debian-amd64
   sudo mount -a   # vuelve a montar bind mounts incluyendo los del chroot
   ```
 
@@ -200,7 +206,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
 Accede al chroot para configurarlo, usando el shell por defecto:
 
 ```bash
-sudo schroot -c debian-amd64
+sudo schroot -c alt-debian-amd64
 ```
 
 Una vez dentro, ejecuta los siguientes comandos:
@@ -326,7 +332,7 @@ mkdir -p /tmp/runtime-<tu_usuario>
 chmod 700 /tmp/runtime-<tu_usuario>
 
 # Inicializar Wine con las variables correctas
-sudo schroot -c debian-amd64 --user=<tu_usuario> -- env \
+sudo schroot -c alt-debian-amd64 --user=<tu_usuario> -- env \
   DISPLAY="$DISPLAY" \
   XAUTHORITY="$XAUTHORITY" \
   XDG_RUNTIME_DIR="/tmp/runtime-<tu_usuario>" \
@@ -343,45 +349,34 @@ Menos recomendado. Wine se ejecuta como `root` y el prefijo se almacena en `/roo
 
 ```bash
 # Desde el host
-sudo schroot -c debian-amd64 -- winecfg
+sudo schroot -c alt-debian-amd64 -- winecfg
 ```
 
 ## Integración con el Escritorio
 
-### 1. Crear script de integración X11 con el host
+### 1. Crear script de integración X11 con el host (Versión Simplificada)
 
-El proyecto incluye un script mejorado `runchroot.sh` en `src/runchroot` que maneja automáticamente:
+**⚡ Versión 2 - Script simplificado** aprovechando `preserve-environment=true`:
 
-- Integración con X11 (DISPLAY, XAUTHORITY)
-- Configuración de XDG_RUNTIME_DIR para aplicaciones Qt/KDE
-- Creación automática de directorios runtime con permisos correctos
+- ✅ DISPLAY y XAUTHORITY se heredan automáticamente del host (no necesitan configuración manual)
+- ✅ Solo configura XDG_RUNTIME_DIR y WINEPREFIX
+- ✅ Script más corto y fácil de mantener
 
-**Contenido del script:**
+**Contenido del script (runchroot-v2.sh):**
 
 ```bash
 #!/usr/bin/env bash
-# Script para ejecutar comandos dentro del chroot
+# Script simplificado para ejecutar comandos dentro del chroot
+# Aprovecha preserve-environment=true en schroot
 
 # Nombre default del chroot
-CHROOT_NAME="${CHROOT_NAME:-debian-amd64}"
-# Ruta default del chroot
-CHROOT_PATH="${CHROOT_PATH:-/srv/$CHROOT_NAME}"
+CHROOT_NAME="${CHROOT_NAME:-alt-debian-amd64}"
 # Usuario objetivo (el que ejecutará Wine)
 USER="${USER:-$(whoami)}"
-# Obtener UID y GID del usuario objetivo (no del proceso actual)
-TARGET_UID=$(id -u "$USER")
-TARGET_GID=$(id -g "$USER")
-TARGET_HOME=$(getent passwd "$USER" | cut -d: -f6)
-# DISPLAY / XAUTHORITY desde el host
-DISPLAY_VAR="${DISPLAY:-:0}"
-XAUTH_VAR="${XAUTHORITY:-$TARGET_HOME/.Xauthority}"
 # Directorio de runtime para aplicaciones Qt/KDE
-# Usar /tmp en lugar de /run porque schroot crea un tmpfs nuevo en /run
-# en lugar de bind-montar el /run del host, causando problemas de ownership.
-# /tmp funciona correctamente preservando permisos y ownership del host.
 RUNTIME_DIR="/tmp/runtime-$USER"
 
-# Crear directorio en el HOST si no existe (será visible automáticamente en chroot)
+# Crear directorio en el HOST si no existe
 if [ ! -d "$RUNTIME_DIR" ]; then
     mkdir -p "$RUNTIME_DIR"
     chmod 700 "$RUNTIME_DIR"
@@ -390,31 +385,68 @@ fi
 # Permitir conexiones locales al servidor X
 xhost +SI:localuser:"$USER" >/dev/null 2>&1 || xhost +local: >/dev/null 2>&1 || true
 
-# Ejecuta el comando en el chroot con todas las variables de entorno necesarias
+# Ejecuta el comando en el chroot
+# Con preserve-environment=true, DISPLAY y XAUTHORITY se heredan automáticamente
 schroot -c "$CHROOT_NAME" --user=$USER -- env \
-    DISPLAY="$DISPLAY_VAR" \
-    XAUTHORITY="$XAUTH_VAR" \
     XDG_RUNTIME_DIR="$RUNTIME_DIR" \
     WINEPREFIX="/home/$USER/.wine" \
     "$@"
 ```
 
-**Características del script:**
+**Comparación con versión 1:**
 
-- ✅ Configura automáticamente `XDG_RUNTIME_DIR` para evitar errores de QStandardPaths en aplicaciones Qt/KDE
+| Aspecto | Versión 1 (preserve=false) | Versión 2 (preserve=true) |
+|---------|---------------------------|---------------------------|
+| Líneas de código | ~39 líneas | ~25 líneas (-36%) |
+| Variables configuradas manualmente | DISPLAY, XAUTHORITY, XDG_RUNTIME_DIR | Solo XDG_RUNTIME_DIR |
+| Detección de UID/GID/HOME | Necesaria | No necesaria |
+| Complejidad | Media | Baja |
+
+**Características del script v2:**
+
+- ✅ Hereda DISPLAY y XAUTHORITY automáticamente del host
+- ✅ Configura solo XDG_RUNTIME_DIR (no heredable) y WINEPREFIX
+- ✅ Código más simple y mantenible
 - ✅ Usa `/tmp/runtime-$USER` como directorio runtime (solución probada y confiable)
-- ✅ Crea el directorio en el HOST con permisos correctos (700), visible automáticamente en el chroot
-- ✅ Evita problemas de ownership que ocurren con `/run/user/$UID` en schroot
-- ✅ Soporta personalización mediante variables de entorno (`CHROOT_NAME`, `CHROOT_PATH`)
 
-### 2. Instalar el script runchroot en el sistema
+### 2. Instalar el script runchroot-v2 en el sistema
 
-Una vez que entiendas cómo funciona el script, instálalo en el sistema para usarlo desde cualquier lugar:
+Crea el script y hazlo ejecutable:
 
 ```bash
-# Copiar el script del proyecto al sistema
-sudo cp src/runchroot.sh /usr/local/bin/runchroot
-sudo chmod +x /usr/local/bin/runchroot
+# Crear el script runchroot-v2
+cat > /tmp/runchroot-v2.sh << 'EOF'
+#!/usr/bin/env bash
+# Script simplificado para ejecutar comandos dentro del chroot
+# Aprovecha preserve-environment=true en schroot
+
+# Nombre default del chroot
+CHROOT_NAME="${CHROOT_NAME:-alt-debian-amd64}"
+# Usuario objetivo (el que ejecutará Wine)
+USER="${USER:-$(whoami)}"
+# Directorio de runtime para aplicaciones Qt/KDE
+RUNTIME_DIR="/tmp/runtime-$USER"
+
+# Crear directorio en el HOST si no existe
+if [ ! -d "$RUNTIME_DIR" ]; then
+    mkdir -p "$RUNTIME_DIR"
+    chmod 700 "$RUNTIME_DIR"
+fi
+
+# Permitir conexiones locales al servidor X
+xhost +SI:localuser:"$USER" >/dev/null 2>&1 || xhost +local: >/dev/null 2>&1 || true
+
+# Ejecuta el comando en el chroot
+# Con preserve-environment=true, DISPLAY y XAUTHORITY se heredan automáticamente
+schroot -c "$CHROOT_NAME" --user=$USER -- env \
+    XDG_RUNTIME_DIR="$RUNTIME_DIR" \
+    WINEPREFIX="/home/$USER/.wine" \
+    "$@"
+EOF
+
+# Copiar al sistema
+sudo cp /tmp/runchroot-v2.sh /usr/local/bin/runchroot-v2
+sudo chmod +x /usr/local/bin/runchroot-v2
 ```
 
 **Probar Wine con el script runchroot:**
@@ -423,23 +455,23 @@ Ahora puedes ejecutar aplicaciones Windows desde cualquier terminal del host:
 
 ```bash
 # Verificar versión de Wine
-runchroot wine --version
+runchroot-v2 wine --version
 
 # Configurar Wine por primera vez (abrirá interfaz gráfica)
-runchroot winecfg
+runchroot-v2 winecfg
 
 # Probar una aplicación simple
-runchroot wine notepad
+runchroot-v2 wine notepad
 
 # Ejecutar q4wine (gestor gráfico de Wine) - opcional
-runchroot q4wine
+runchroot-v2 q4wine
 ```
 
 **Ejemplo con aplicación Windows instalada:**
 
 ```bash
 # Si tienes Notepad++ instalado en Wine
-runchroot wine "C:\\Program Files\\Notepad++\\notepad++.exe"
+runchroot-v2 wine "C:\\Program Files\\Notepad++\\notepad++.exe"
 ```
 
 ### 3. Configurar `sudoers` para Ejecución sin Contraseña (Opcional)
@@ -466,7 +498,7 @@ Aunque Wine puede funcionar con `xterm`, es recomendable instalar un emulador de
 
 ```bash
 # Dentro del chroot
-sudo schroot -c debian-amd64
+sudo schroot -c alt-debian-amd64
 apt install -y gnome-terminal
 # o
 apt install -y konsole
@@ -484,7 +516,7 @@ Una vez instalado el script `runchroot` y un terminal mejorado, puedes configura
 a) Abre Q4Wine usando el script `runchroot`:
 
   ```bash
-  runchroot q4wine
+  runchroot-v2 q4wine
   ```
 
   **Nota sobre errores de QStandardPaths:** El script `runchroot` configura automáticamente `XDG_RUNTIME_DIR` apuntando a `/tmp/runtime-$USER`, evitando así problemas de ownership que ocurren con `/run/user/$UID` en entornos schroot. Por lo tanto, no deberías experimentar errores como "QStandardPaths: runtime directory '/run/user/1000' is not owned by UID 1000". Si aún así experimentas problemas, verifica que:
@@ -515,7 +547,7 @@ Guarda los cambios y continúa.
 
 Se puede crear un archivo `.desktop` para cada aplicación Windows que desees ejecutar desde el menú de aplicaciones de tu escritorio. Aquí tienes un ejemplo de cómo crear un acceso directo para Notepad++:
 
-Crea un archivo llamado `notepad++.desktop` en `~/.local/share/applications/` con el contenido siguiente:
+Crea un archivo llamado `notepadpp.desktop` en `~/.local/share/applications/` con el contenido siguiente:
 
 - Notar que debes ajustar las rutas, tanto del **ejecutable**, como del **icono** según tu instalación**:
   - Nota el uso de dobles barras invertidas (`\\`) en la ruta de Windows.
@@ -558,15 +590,15 @@ Ejecutando el instalador de la aplicación Windows dentro del chroot, puedes ext
 
   ```bash
 
-  schroot -c debian-amd64 -- wrestool -x -t14 "/srv/debian-amd64/root/.wine/drive_c/Program Files/Notepad++/Notepad++.exe" -o /home/<tu-usuario>/Notepad++.ico
-  sudo schroot -c debian-amd64 -- sudo icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
+  schroot -c alt-debian-amd64 -- wrestool -x -t14 "/srv/alt-debian-amd64/root/.wine/drive_c/Program Files/Notepad++/Notepad++.exe" -o /home/<tu-usuario>/Notepad++.ico
+  sudo schroot -c alt-debian-amd64 -- sudo icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
   ```
 
 - Si se instala como usuario, el prefijo estará en `/home/<tu-usuario>/.wine`.
 
   ```bash
-  schroot -c debian-amd64 --user=<tu-usuario> -- wrestool -x -t14 "/srv/debian-amd64/home/<tu-usuario>/.wine/drive_c/Program Files/Notepad++/Notepad++.exe" -o /home/<tu-usuario>/Notepad++.ico
-  sudo schroot -c debian-amd64 --user=<tu-usuario> -- icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
+  schroot -c alt-debian-amd64 --user=<tu-usuario> -- wrestool -x -t14 "/srv/alt-debian-amd64/home/<tu-usuario>/.wine/drive_c/Program Files/Notepad++/Notepad++.exe" -o /home/<tu-usuario>/Notepad++.ico
+  sudo schroot -c alt-debian-amd64 --user=<tu-usuario> -- icotool -x /home/<tu-usuario>/Notepad++.ico -o /home/<tu-usuario>/.local/share/icons/Notepad++.png
   ```
 
 ### c. Refrescar el menú de aplicaciones
