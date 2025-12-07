@@ -90,7 +90,7 @@ Define los puntos de montaje que el chroot compartirá con el host. Edita `/etc/
 /tmp/.X11-unix  /tmp/.X11-unix  none    rw,bind    0       0
 ```
 
-**Nota importante sobre `/run` y `/tmp`:** Aunque `/run` está configurado como bind-mount, schroot en realidad crea un tmpfs nuevo en lugar de bind-montar el `/run` del host. Esto causa problemas de ownership con directorios como `/run/user/$UID`. Por esta razón, el script `runchroot` usa `/tmp/runtime-$USER` en lugar de `/run/user/$UID`, ya que `/tmp` sí funciona correctamente preservando permisos y ownership.
+**Nota importante sobre `/run` y `/tmp`:** Aunque `/run` está configurado como bind-mount, schroot en realidad crea un tmpfs nuevo en lugar de bind-montar el `/run` del host. Esto causa problemas de ownership con directorios como `/run/user/$UID`. Por esta razón, el script `run-chroot` usa `/tmp/runtime-$USER` en lugar de `/run/user/$UID`, ya que `/tmp` sí funciona correctamente preservando permisos y ownership.
 
 ### 5. Probar que schroot ve el ambiente
 
@@ -293,7 +293,7 @@ wine --version
 
 Deberías ver algo como `wine-10.0 (Debian 10.0~repack-6)`.
 
-**IMPORTANTE:** No ejecutes comandos gráficos de Wine (`winecfg`, `q4wine`, `wine notepad`) desde dentro del chroot directamente, ya que no tendrán acceso al servidor X11 ni las variables de entorno necesarias. En su lugar, usa el script `runchroot` desde el host (ver secciones siguientes).
+**IMPORTANTE:** No ejecutes comandos gráficos de Wine (`winecfg`, `q4wine`, `wine notepad`) desde dentro del chroot directamente, ya que no tendrán acceso al servidor X11 ni las variables de entorno necesarias. En su lugar, usa el script `run-chroot` desde el host (ver secciones siguientes).
 
 **g. Salir del chroot:**
 
@@ -335,7 +335,7 @@ sudo schroot -c debian-amd64 --user=<tu_usuario> -- env \
 
 Esto creará el prefijo en `/home/<tu_usuario>/.wine` dentro del chroot.
 
-**Nota:** Más adelante instalaremos el script `runchroot` que simplificará este proceso manejando automáticamente todas estas variables de entorno y la creación del directorio runtime.
+**Nota:** Más adelante instalaremos el script `run-chroot` que simplificará este proceso manejando automáticamente todas estas variables de entorno y la creación del directorio runtime.
 
 ### B. Instalación Global (Modo Root)
 
@@ -350,7 +350,7 @@ sudo schroot -c debian-amd64 -- winecfg
 
 ### 1. Crear script de integración X11 con el host
 
-El proyecto incluye un script mejorado `runchroot.sh` en `src/runchroot` que maneja automáticamente:
+El proyecto incluye un script mejorado `run-chroot.sh` en `src/run-chroot` que maneja automáticamente:
 
 - Integración con X11 (DISPLAY, XAUTHORITY)
 - Configuración de XDG_RUNTIME_DIR para aplicaciones Qt/KDE
@@ -407,39 +407,39 @@ schroot -c "$CHROOT_NAME" --user=$USER -- env \
 - ✅ Evita problemas de ownership que ocurren con `/run/user/$UID` en schroot
 - ✅ Soporta personalización mediante variables de entorno (`CHROOT_NAME`, `CHROOT_PATH`)
 
-### 2. Instalar el script runchroot en el sistema
+### 2. Instalar el script run-chroot en el sistema
 
 Una vez que entiendas cómo funciona el script, instálalo en el sistema para usarlo desde cualquier lugar:
 
 ```bash
 # Copiar el script del proyecto al sistema
-sudo cp src/runchroot.sh /usr/local/bin/runchroot
-sudo chmod +x /usr/local/bin/runchroot
+sudo cp src/run-chroot.sh /usr/local/bin/run-chroot
+sudo chmod +x /usr/local/bin/run-chroot
 ```
 
-**Probar Wine con el script runchroot:**
+**Probar Wine con el script run-chroot:**
 
 Ahora puedes ejecutar aplicaciones Windows desde cualquier terminal del host:
 
 ```bash
 # Verificar versión de Wine
-runchroot wine --version
+run-chroot wine --version
 
 # Configurar Wine por primera vez (abrirá interfaz gráfica)
-runchroot winecfg
+run-chroot winecfg
 
 # Probar una aplicación simple
-runchroot wine notepad
+run-chroot wine notepad
 
 # Ejecutar q4wine (gestor gráfico de Wine) - opcional
-runchroot q4wine
+run-chroot q4wine
 ```
 
 **Ejemplo con aplicación Windows instalada:**
 
 ```bash
 # Si tienes Notepad++ instalado en Wine
-runchroot wine "C:\\Program Files\\Notepad++\\notepad++.exe"
+run-chroot wine "C:\\Program Files\\Notepad++\\notepad++.exe"
 ```
 
 ### 3. Configurar `sudoers` para Ejecución sin Contraseña (Opcional)
@@ -450,12 +450,12 @@ Para que los accesos directos del menú no pidan contraseña al usar `schroot`, 
 
 ```sudoers
 # para no usar sudo al llamar integración con escritorio
-<tu_usuario> ALL=(ALL) NOPASSWD: /usr/local/bin/runchroot
+<tu_usuario> ALL=(ALL) NOPASSWD: /usr/local/bin/run-chroot
 # no pedir contraseña al usar `schroot` para entrar al shell del ambiente
 <tu_usuario> ALL=(ALL) NOPASSWD: /usr/bin/schroot
 ```
 
-- La primera línea permite ejecutar el script `runchroot` sin contraseña, que es el que se usará en los accesos directos.
+- La primera línea permite ejecutar el script `run-chroot` sin contraseña, que es el que se usará en los accesos directos.
 - La segunda línea permite usar `schroot` sin contraseña, útil para abrir una terminal dentro del chroot si es necesario.
 
 ## Configuración Adicional (Opcional)
@@ -479,17 +479,17 @@ exit
 
 ### Configurar Q4Wine - cambiar terminal predeterminado
 
-Una vez instalado el script `runchroot` y un terminal mejorado, puedes configurar Q4Wine:
+Una vez instalado el script `run-chroot` y un terminal mejorado, puedes configurar Q4Wine:
 
-a) Abre Q4Wine usando el script `runchroot`:
+a) Abre Q4Wine usando el script `run-chroot`:
 
   ```bash
-  runchroot q4wine
+  run-chroot q4wine
   ```
 
-  **Nota sobre errores de QStandardPaths:** El script `runchroot` configura automáticamente `XDG_RUNTIME_DIR` apuntando a `/tmp/runtime-$USER`, evitando así problemas de ownership que ocurren con `/run/user/$UID` en entornos schroot. Por lo tanto, no deberías experimentar errores como "QStandardPaths: runtime directory '/run/user/1000' is not owned by UID 1000". Si aún así experimentas problemas, verifica que:
+  **Nota sobre errores de QStandardPaths:** El script `run-chroot` configura automáticamente `XDG_RUNTIME_DIR` apuntando a `/tmp/runtime-$USER`, evitando así problemas de ownership que ocurren con `/run/user/$UID` en entornos schroot. Por lo tanto, no deberías experimentar errores como "QStandardPaths: runtime directory '/run/user/1000' is not owned by UID 1000". Si aún así experimentas problemas, verifica que:
 
-- El script `runchroot` esté instalado correctamente en `/usr/local/bin/runchroot`
+- El script `run-chroot` esté instalado correctamente en `/usr/local/bin/run-chroot`
 - El directorio `/tmp` sea accesible y tenga permisos de escritura
 - El usuario tenga permisos para crear directorios en `/tmp`
 
@@ -525,7 +525,7 @@ Crea un archivo llamado `notepad++.desktop` en `~/.local/share/applications/` co
 [Desktop Entry]
 Name=Notepad++
 Comment=Editor de texto Notepad++ ejecutado dentro del entorno Wine amd64 (schroot)
-Exec=/usr/local/bin/runchroot "C:\\Program Files\\Notepad++\\Notepad++.exe"
+Exec=/usr/local/bin/run-chroot "C:\\Program Files\\Notepad++\\Notepad++.exe"
 Icon=~/.local/share/icons/Notepad++.png
 Terminal=false
 Type=Application
@@ -538,7 +538,7 @@ donde:
 
 - `Name`: El nombre que aparecerá en el menú.
 - `Comment`: Una breve descripción de la aplicación.
-- `Exec`: La ruta al script `runchroot` seguido del camino al ejecutable de la aplicación Windows.
+- `Exec`: La ruta al script `run-chroot` seguido del camino al ejecutable de la aplicación Windows.
 - `Icon`: La ruta al icono que deseas usar para la aplicación. En este caso, se asume que has colocado un icono en `~/.local/share/icons/Notepad++.png`.
 - `Terminal`: `false` indica que no se debe abrir una terminal al ejecutar la aplicación.
 - `Type`: El tipo de entrada, en este caso una aplicación.
