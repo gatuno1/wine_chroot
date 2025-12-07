@@ -15,7 +15,7 @@ Wine Chroot enables running Windows amd64 applications on ARM64 Linux systems us
 │  Host System (Debian ARM64)                          │
 │                                                      │
 │  ┌──────────────────────────────────────────┐        │
-│  │  runchroot.sh                            │        │
+│  │  run-chroot.sh                           │        │
 │  │  - Handles X11 integration               │        │
 │  │  - Manages environment variables         │        │
 │  │  - Creates runtime directories           │        │
@@ -48,8 +48,8 @@ Wine Chroot enables running Windows amd64 applications on ARM64 Linux systems us
 ```asciiart
 wine_chroot/
 ├── src/
-│   ├── runchroot.sh          # Main launcher script (v1)
-│   └── runchroot-v2.sh       # Simplified launcher script (v2) ⭐ RECOMMENDED
+│   ├── run-chroot.sh        # Main launcher script (v1)
+│   └── run-chroot-v2.sh     # Simplified launcher script (v2) ⭐ RECOMMENDED
 ├── docs/
 │   ├── chroot-setup_es.md    # Complete setup guide (Spanish) - v1
 │   ├── chroot-setup-v2_es.md # Simplified setup guide (Spanish) - v2 ⭐
@@ -61,7 +61,7 @@ wine_chroot/
 
 ## Core Scripts
 
-### ⭐ runchroot-v2.sh (RECOMMENDED)
+### ⭐ run-chroot-v2.sh (RECOMMENDED)
 
 **Version 2 - Simplified approach using `preserve-environment=true`**
 
@@ -81,7 +81,7 @@ wine_chroot/
 - ✅ Single-user desktop setups
 - ✅ You trust the host environment
 
-### runchroot.sh (v1)
+### run-chroot.sh (v1)
 
 **Version 1 - Full control approach using `preserve-environment=false`**
 
@@ -112,7 +112,7 @@ TARGET_GID=$(id -g "$USER")      # Not $(id -g)
 TARGET_HOME=$(getent passwd "$USER" | cut -d: -f6)  # Not $HOME
 ```
 
-This ensures that when executed via `sudo USER=actual_user ./runchroot.sh`, all paths and permissions reference `actual_user`, not root.
+This ensures that when executed via `sudo USER=actual_user ./run-chroot.sh`, all paths and permissions reference `actual_user`, not root.
 
 **Environment Variables:**
 
@@ -124,13 +124,13 @@ This ensures that when executed via `sudo USER=actual_user ./runchroot.sh`, all 
 
 ```bash
 # Execute Wine application
-runchroot wine "C:\Program Files\App\app.exe"
+run-chroot wine "C:\Program Files\App\app.exe"
 
 # Run Wine configuration
-runchroot winecfg
+run-chroot winecfg
 
 # Launch Q4Wine (Wine GUI manager)
-runchroot q4wine
+run-chroot q4wine
 ```
 
 ## System Requirements
@@ -190,11 +190,11 @@ runchroot q4wine
    apt install wine wine32 wine64 winetricks fonts-wine
    ```
 
-5. **Install runchroot script:**
+5. **Install run-chroot script:**
 
    ```bash
-   sudo cp src/runchroot.sh /usr/local/bin/runchroot
-   sudo chmod +x /usr/local/bin/runchroot
+   sudo cp src/run-chroot.sh /usr/local/bin/run-chroot
+   sudo chmod +x /usr/local/bin/run-chroot
    ```
 
 6. **Configure sudoers** (optional, for password-less execution):
@@ -214,7 +214,7 @@ Create launchers in `~/.local/share/applications/`:
 [Desktop Entry]
 Name=Application Name
 Comment=Description
-Exec=/usr/local/bin/runchroot wine "C:\\Path\\To\\App.exe"
+Exec=/usr/local/bin/run-chroot wine "C:\\Path\\To\\App.exe"
 Icon=~/.local/share/icons/app-icon.png
 Terminal=false
 Type=Application
@@ -225,7 +225,7 @@ StartupWMClass=app.exe
 
 **Key Fields:**
 
-- `Exec`: Must use `runchroot` and Windows path format with double backslashes
+- `Exec`: Must use `run-chroot` and Windows path format with double backslashes
 - `Icon`: Extract icons using `wrestool` and `icotool` (see docs)
 - `StartupWMClass`: Usually the executable name (helps window managers)
 - `Categories`: Include `Wine;` for organization
@@ -280,7 +280,7 @@ ls -la /tmp/.X11-unix/
 echo $DISPLAY
 
 # Test X11 forwarding
-runchroot xterm
+run-chroot xterm
 ```
 
 ### Path Conversion
@@ -289,10 +289,10 @@ runchroot xterm
 
 ```bash
 # Correct
-runchroot wine "C:\\Program Files\\App\\app.exe"
+run-chroot wine "C:\\Program Files\\App\\app.exe"
 
 # Incorrect (will fail)
-runchroot wine "C:\Program Files\App\app.exe"
+run-chroot wine "C:\Program Files\App\app.exe"
 ```
 
 **Linux paths to Wine paths:**
@@ -313,14 +313,14 @@ The script handles environment setup, but executable paths must be provided in W
 
 **Cause:** schroot creates a new tmpfs for `/run` instead of bind-mounting it from the host, causing ownership mismatches
 
-**Solution:** The `runchroot.sh` script uses `/tmp/runtime-$USER` instead of `/run/user/$UID`, avoiding this issue entirely. Verify:
+**Solution:** The `run-chroot.sh` script uses `/tmp/runtime-$USER` instead of `/run/user/$UID`, avoiding this issue entirely. Verify:
 
 ```bash
 ls -ld /tmp/runtime-$(whoami)
 # Should show: drwx------ owned by your user
 ```
 
-This directory is automatically created by `runchroot.sh` and is accessible from both host and chroot with correct permissions.
+This directory is automatically created by `run-chroot.sh` and is accessible from both host and chroot with correct permissions.
 
 ### Wine Prefix Issues
 
@@ -378,25 +378,25 @@ This is critical for scripts executed via sudo/pkexec.
 
 ### Testing Changes
 
-When modifying `runchroot.sh`:
+When modifying `run-chroot.sh`:
 
 1. Test with direct execution:
 
    ```bash
-   ./src/runchroot.sh wine notepad
+   ./src/run-chroot.sh wine notepad
    ```
 
 2. Test with sudo (simulates .desktop launcher):
 
    ```bash
-   sudo USER=$USER ./src/runchroot.sh wine notepad
+   sudo USER=$USER ./src/run-chroot.sh wine notepad
    ```
 
 3. Test via installed script:
 
    ```bash
-   sudo cp src/runchroot.sh /usr/local/bin/runchroot
-   runchroot wine notepad
+   sudo cp src/run-chroot.sh /usr/local/bin/run-chroot
+   run-chroot wine notepad
    ```
 
 4. Test via .desktop file (full integration):

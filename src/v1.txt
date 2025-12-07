@@ -1,0 +1,18 @@
+HOME=/home/gatuno
+LOGNAME=gatuno
+PATH=/usr/local/bin:/usr/bin:/bin
+SCHROOT_ALIAS_NAME=debian-amd64
+SCHROOT_CHROOT_NAME=debian-amd64
+SCHROOT_COMMAND=env DISPLAY=:10.0 XAUTHORITY=/home/gatuno/.Xauthority XDG_RUNTIME_DIR=/tmp/runtime-gatuno WINEPREFIX=/home/gatuno/.wine env
+SCHROOT_GID=1000
+SCHROOT_GROUP=gatuno
+SCHROOT_SESSION_ID=debian-amd64-5458c0f1-ea5e-41e8-b0fc-1658befc4c8b
+SCHROOT_UID=1000
+SCHROOT_USER=gatuno
+SHELL=/usr/bin/zsh
+TERM=xterm-256color
+USER=gatuno
+DISPLAY=:10.0
+XAUTHORITY=/home/gatuno/.Xauthority
+XDG_RUNTIME_DIR=/tmp/runtime-gatuno
+WINEPREFIX=/home/gatuno/.wine
